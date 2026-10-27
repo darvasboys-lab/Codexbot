@@ -24,6 +24,7 @@ Status date: 2026-10-27 (Asia/Kolkata)
   forms. It preserves price bounds, month, strike, and CE/PE; ignores Telegram
   SL/target prose; and fails closed for the supplied analysis, watchlist,
   future-intent, status/log, negated-BUY, and chart-only examples.
+- Fail-closed same-group/message-ID redelivery handling: a replay is audited but never re-parsed, re-resolved, or re-evaluated for a duplicate claim, including after a restart or a prior rejection. First receipt timestamps remain immutable.
 - TEST-safe processing composition for durable receipt, parsing, deterministic
   checking, append-only audit, and atomic option deduplication. Rejected source,
   freshness, index, listing, price, identity, and ambiguity cases create no
