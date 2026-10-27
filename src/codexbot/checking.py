@@ -9,6 +9,7 @@ from codexbot.models import (
     CheckDisposition,
     CheckerPolicy,
     CheckReport,
+    ExecutionMode,
     InstrumentFacts,
     InstrumentKind,
     NormalizedSignal,
@@ -27,6 +28,10 @@ class SignalChecker:
 
     def __init__(self, policy: CheckerPolicy) -> None:
         self._policy = policy
+
+    @property
+    def execution_mode(self) -> ExecutionMode:
+        return self._policy.execution_mode
 
     def check(
         self,

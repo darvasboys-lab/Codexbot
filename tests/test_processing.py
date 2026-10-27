@@ -257,3 +257,52 @@ def test_processing_audit_records_parse_and_final_decision(tmp_path: Path) -> No
         "OPTION_DUPLICATE_CLAIMED",
         "SIGNAL_CHECKED",
     ]
+
+
+def test_replayed_valid_message_never_rechecks_or_reclaims(tmp_path: Path) -> None:
+    clock = MutableClock(NOW)
+    signal_processor, database_path, resolver = processor(tmp_path, clock, option_facts())
+    first = signal_processor.process(envelope(message_id=1))
+    assert first.report.disposition is CheckDisposition.PASSED_CORE
+
+    clock.current = NOW + timedelta(seconds=30)
+    replay = signal_processor.process(
+        envelope(message_id=1, text="CDSL 1600PE NOV @50-55", sent_at=clock.current)
+    )
+
+    assert replay.receipt.id == first.receipt.id
+    assert replay.receipt.is_redelivery
+    assert replay.report.disposition is CheckDisposition.REJECTED
+    assert replay.report.reasons == (ReasonCode.REDELIVERED_MESSAGE,)
+    assert replay.report.pending_gates == ()
+    assert replay.duplicate_claim is None
+    assert replay.instrument is None
+    assert resolver.as_of_dates == [date(2026, 10, 27)]
+    assert claim_count(database_path) == 1
+    with sqlite3.connect(database_path) as connection:
+        events = [
+            str(row[0])
+            for row in connection.execute("SELECT event_type FROM audit_events ORDER BY id")
+        ]
+    assert events.count("SIGNAL_CHECKED") == 1
+    assert events.count("SIGNAL_REDELIVERED") == 1
+
+
+def test_replay_after_restart_cannot_promote_original_rejection(tmp_path: Path) -> None:
+    clock = MutableClock(NOW)
+    first_processor, database_path, _ = processor(
+        tmp_path, clock, option_facts(unique_contract=False)
+    )
+    rejected = first_processor.process(envelope(message_id=1))
+    assert rejected.report.disposition is CheckDisposition.REJECTED
+    assert claim_count(database_path) == 0
+
+    # A new processor instance uses the same durable database after restart.
+    clock.current = NOW + timedelta(seconds=40)
+    restarted_processor, _, resolver = processor(tmp_path, clock, option_facts())
+    replay = restarted_processor.process(envelope(message_id=1))
+
+    assert replay.report.reasons == (ReasonCode.REDELIVERED_MESSAGE,)
+    assert replay.duplicate_claim is None
+    assert resolver.as_of_dates == []
+    assert claim_count(database_path) == 0

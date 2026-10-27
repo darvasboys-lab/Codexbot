@@ -24,6 +24,7 @@ Status date: 2026-10-27 (Asia/Kolkata)
   forms. It preserves price bounds, month, strike, and CE/PE; ignores Telegram
   SL/target prose; and fails closed for the supplied analysis, watchlist,
   future-intent, status/log, negated-BUY, and chart-only examples.
+- Fail-closed same-group/message-ID redelivery handling: a replay is audited but never re-parsed, re-resolved, or re-evaluated for a duplicate claim, including after a restart or a prior rejection. First receipt timestamps remain immutable.
 - TEST-safe processing composition for durable receipt, parsing, deterministic
   checking, append-only audit, and atomic option deduplication. Rejected source,
   freshness, index, listing, price, identity, and ambiguity cases create no
@@ -46,7 +47,7 @@ Status date: 2026-10-27 (Asia/Kolkata)
 - Structured reason codes and explicit remaining-gate list.
 - Structural safety boundary: the package contains no broker client, order model,
   fill model, holdings model, or simulator; `trade_ready` is always false.
-- Automated unit tests for implemented behavior and safety boundaries.
+- Automated unit tests for implemented behavior and safety boundaries; PR #1 adds two replay/restart regression tests (130 total), with Ruff, strict mypy, and pytest passing in GitHub Actions.
 - Completed reference-archive review with no source reuse; candidate formats,
   conflicts, and rejected legacy behavior are documented.
 
@@ -57,6 +58,7 @@ Status date: 2026-10-27 (Asia/Kolkata)
   LIVE blocker and open broker questions are recorded in `DHAN_API.md`.
 - The locked local development environment installs successfully. Ruff, strict
   mypy, and the full unit suite pass; exact results are kept in the test plan.
+- PR #1 replay-safety change passed GitHub Actions checks; review/merge remains pending.
 
 ## Planned, blocked by inputs or approval
 

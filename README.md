@@ -32,7 +32,7 @@ instructions, unsupported text, and chart-only messages without a caption fail
 closed as non-actionable. Telegram SL, target, holding-period, and sizing prose do
 not alter parsed entry fields.
 
-The SQLite journal uses WAL mode and immutable first receipts. Its atomic
+The SQLite journal uses WAL mode and immutable first receipts. Re-delivery of the same Telegram group/message ID is audited and rejected before parsing, resolution, or duplicate claiming, including across restarts. This is an at-most-once intake safety boundary; an interrupted first attempt is not automatically retried and requires operator reconciliation before any future live execution. Its atomic
 20-second stock-option claim uses canonical underlying ID + `BUY` + stock-option
 family, deliberately ignoring strike, expiry, price, and CE/PE. Audit, receipt,
 claim, and decision rows are append-only. The Yahoo adapter retrieves timestamped
