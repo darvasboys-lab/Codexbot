@@ -1,0 +1,33 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
+
+# Runtime configuration and credentials
+.env
+.env.*
+*.env
+!.env.example
+*.session
+*.session-journal
+*.key
+*.pem
+
+# Durable runtime state must be backed up outside Git.
+data/
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+.idea/
+.vscode/
+.DS_Store
