@@ -19,6 +19,7 @@ separately approved live test.
 - Verify a passing core report remains `trade_ready = false` and exposes every
   missing gate.
 
+- Verify same-group/message-ID redelivery is rejected before parser/resolver/claim work, even after 20 seconds or a process restart; previously rejected receipts cannot be promoted on replay.
 - Verify WAL configuration, immutable first-receipt idempotency, append-only
   enforcement, exact duplicate boundaries, cross-group behavior, and a concurrent
   two-writer claim race.
@@ -50,7 +51,7 @@ separately approved live test.
   sidecar hardening, unauthorized-session refusal, authorized lifecycle cleanup,
   and NewMessage-only registration with a fake client.
 
-Current result: 128 tests pass. Ruff and strict mypy pass.
+Prior baseline: 128 tests pass; Ruff and strict mypy pass. New replay-safety regression tests added; CI verification pending.
 
 ## 2. Remaining parser and reference-rule tests
 
