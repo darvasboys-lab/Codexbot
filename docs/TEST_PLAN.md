@@ -51,7 +51,7 @@ separately approved live test.
   sidecar hardening, unauthorized-session refusal, authorized lifecycle cleanup,
   and NewMessage-only registration with a fake client.
 
-Prior baseline: 128 tests pass; Ruff and strict mypy pass. New replay-safety regression tests added; CI verification pending.
+Current PR: 130 tests pass (128 baseline plus two replay-safety regressions); Ruff and strict mypy pass in GitHub Actions. See PR #1 CI checks.
 
 ## 2. Remaining parser and reference-rule tests
 
