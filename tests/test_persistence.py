@@ -52,6 +52,8 @@ def test_database_uses_wal_and_first_receipt_is_immutable(tmp_path: Path) -> Non
 
     assert journal.journal_mode() == "wal"
     assert redelivery == first
+    assert not first.is_redelivery
+    assert redelivery.is_redelivery
     assert first.first_durable_received_at == NOW
     with sqlite3.connect(database_path) as connection:
         states = connection.execute("SELECT event_type FROM audit_events ORDER BY id").fetchall()
