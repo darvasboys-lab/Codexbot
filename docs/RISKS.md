@@ -11,7 +11,7 @@ Status date: 2026-10-27 (Asia/Kolkata)
 | Wrong stock/contract | Strictly validate Dhan's detailed master; activate checksummed snapshots atomically; enforce explicit age; resolve canonical identity and reject ambiguity | Resolver/cache implemented; production age and tick-unit verification pending |
 | Duplicate Telegram events across groups/reconnects | Immutable first receipt plus atomic 20-second canonical-underlying option claim; ignore strike/expiry/price/CE-PE | Implemented for stock options |
 | Backlog traded after reconnect | Fail closed; no old-message auto-trading; exact still-fresh backlog policy remains open | Policy open |
-| Token/TOTP or Telegram session exposure | Files outside Git with restrictive permissions; redact logs/errors/URLs; manual recovery; no secrets in images or command history | Git exclusions implemented; runtime pending |
+| Token/TOTP or Telegram session exposure | Owner-only non-symlink config, redacted secret wrappers, files outside Git, URL/error redaction, manual recovery | Loader/Git exclusions implemented; adapters pending |
 | Unexpected mode transition | Reconcile first; recheck durable common mode at submission boundary; manage filled exposure under an approved policy | Policy open |
 | AI hallucination, latency, or data disclosure | Advisory-only review, deterministic revalidation, bounded timeout/cost, audit, and approved provider/data policy | Policy open |
 | VM/SQLite loss or corruption | WAL, short transactions, integrity/backup/restore commands, encrypted scheduled backups, restore drills, disk alerts | Core tooling implemented; VM operations open |

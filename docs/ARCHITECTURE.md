@@ -70,6 +70,16 @@ later adds a gate; this list is never evidence that order submission is authoriz
 - **Admin CLI:** status, effective settings (redacted), orders, positions, errors,
   service control, emergency stop, and separately confirmed close action over SSH.
 
+## Configuration boundary
+
+One protected environment file supplies the single-instance runtime settings and
+credentials. The loader requires service-user ownership, a regular non-symlink
+file, and mode `0600` or stricter. It accepts only documented keys and performs no
+shell expansion. TEST is the sole default; both segment flags, source identities,
+paths, instrument age, Telegram credentials/session path, and Dhan TOTP inputs are
+explicit. Secret value objects render only `<redacted>` and require an explicit
+adapter call to reveal their value.
+
 ## Persistence decision
 
 For one process on one VM, SQLite in WAL mode is approved and implemented.

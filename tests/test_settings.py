@@ -1,0 +1,145 @@
+import os
+from pathlib import Path
+
+import pytest
+
+from codexbot import (
+    ExecutionMode,
+    SettingsError,
+    configuration_from_mapping,
+    load_protected_environment,
+)
+
+
+def valid_values() -> dict[str, str]:
+    return {
+        "CODEXBOT_EQUITY_ACTIVE": "false",
+        "CODEXBOT_FNO_ACTIVE": "true",
+        "CODEXBOT_GROUP_IDS": "-1001,-1002",
+        "CODEXBOT_AUTHORIZED_SOURCE_IDS": "2001,2002",
+        "CODEXBOT_LOG_GROUP_ID": "-9001",
+        "CODEXBOT_DATABASE_PATH": "/var/lib/codexbot/codexbot.sqlite3",
+        "CODEXBOT_INSTRUMENT_CACHE_DIRECTORY": "/var/lib/codexbot/instruments",
+        "CODEXBOT_INSTRUMENT_MAX_AGE_SECONDS": "3600",
+        "TELEGRAM_API_ID": "123456",
+        "TELEGRAM_API_HASH": "telegram-secret-hash",
+        "TELEGRAM_SESSION_PATH": "/var/lib/codexbot/udit.session",
+        "DHAN_CLIENT_ID": "dhan-client",
+        "DHAN_PIN": "1234",
+        "DHAN_TOTP_SECRET": "BASE32SECRET",
+    }
+
+
+def environment_text(values: dict[str, str]) -> str:
+    return "\n".join(f"{name}={value}" for name, value in values.items()) + "\n"
+
+
+def test_configuration_defaults_only_common_mode_to_test() -> None:
+    configuration = configuration_from_mapping(valid_values())
+
+    assert configuration.settings.mode is ExecutionMode.TEST
+    assert configuration.settings.equity_active is False
+    assert configuration.settings.fno_active is True
+    assert configuration.settings.allowed_group_ids == frozenset({-1001, -1002})
+    assert configuration.settings.authorized_source_ids == frozenset({2001, 2002})
+    assert configuration.settings.instrument_maximum_age.total_seconds() == 3600
+    assert configuration.settings.checker_policy().execution_mode is ExecutionMode.TEST
+
+
+def test_explicit_live_mode_does_not_create_an_execution_capability() -> None:
+    values = valid_values()
+    values["CODEXBOT_MODE"] = "LIVE"
+
+    configuration = configuration_from_mapping(values)
+
+    assert configuration.settings.mode is ExecutionMode.LIVE
+    assert not hasattr(configuration, "place_order")
+
+
+def test_credentials_never_appear_in_repr_or_string() -> None:
+    configuration = configuration_from_mapping(valid_values())
+    rendered = repr(configuration)
+
+    assert "telegram-secret-hash" not in rendered
+    assert "BASE32SECRET" not in rendered
+    assert "1234" not in rendered
+    assert str(configuration.telegram.api_hash) == "<redacted>"
+    assert configuration.telegram.api_hash.reveal() == "telegram-secret-hash"
+
+
+@pytest.mark.parametrize(
+    ("name", "value", "message"),
+    [
+        ("CODEXBOT_EQUITY_ACTIVE", "yes", "true or false"),
+        ("CODEXBOT_GROUP_IDS", "-1001,-1001", "duplicate IDs"),
+        ("CODEXBOT_AUTHORIZED_SOURCE_IDS", "0", "cannot contain zero"),
+        ("CODEXBOT_LOG_GROUP_ID", "0", "cannot be zero"),
+        ("CODEXBOT_INSTRUMENT_MAX_AGE_SECONDS", "0", "must be positive"),
+        ("TELEGRAM_API_ID", "not-an-int", "must be an integer"),
+        ("CODEXBOT_MODE", "PAPER", "TEST or LIVE"),
+    ],
+)
+def test_invalid_setting_fails_closed(name: str, value: str, message: str) -> None:
+    values = valid_values()
+    values[name] = value
+
+    with pytest.raises(SettingsError, match=message):
+        configuration_from_mapping(values)
+
+
+def test_missing_secret_fails_without_echoing_secret_values() -> None:
+    values = valid_values()
+    del values["DHAN_PIN"]
+
+    with pytest.raises(SettingsError, match="DHAN_PIN is required") as error:
+        configuration_from_mapping(values)
+
+    assert "BASE32SECRET" not in str(error.value)
+
+
+def test_loads_owner_only_regular_environment_file(tmp_path: Path) -> None:
+    environment_path = tmp_path / "codexbot.env"
+    environment_path.write_text(environment_text(valid_values()), encoding="utf-8")
+    environment_path.chmod(0o600)
+
+    configuration = load_protected_environment(environment_path)
+
+    assert configuration.settings.log_group_id == -9001
+
+
+def test_rejects_group_or_world_readable_environment_file(tmp_path: Path) -> None:
+    environment_path = tmp_path / "codexbot.env"
+    environment_path.write_text(environment_text(valid_values()), encoding="utf-8")
+    environment_path.chmod(0o640)
+
+    with pytest.raises(SettingsError, match="0600"):
+        load_protected_environment(environment_path)
+
+
+def test_rejects_symlink_environment_file(tmp_path: Path) -> None:
+    target = tmp_path / "target.env"
+    target.write_text(environment_text(valid_values()), encoding="utf-8")
+    target.chmod(0o600)
+    link = tmp_path / "codexbot.env"
+    os.symlink(target, link)
+
+    with pytest.raises(SettingsError, match="symlink"):
+        load_protected_environment(link)
+
+
+@pytest.mark.parametrize(
+    ("line", "message"),
+    [
+        ("UNKNOWN_KEY=value", "unknown environment key"),
+        ("CODEXBOT_MODE=TEST\nCODEXBOT_MODE=LIVE", "duplicate environment key"),
+        ('TELEGRAM_API_HASH="unterminated', "unterminated quote"),
+        ("not an assignment", "invalid environment syntax"),
+    ],
+)
+def test_environment_file_syntax_is_strict(tmp_path: Path, line: str, message: str) -> None:
+    environment_path = tmp_path / "codexbot.env"
+    environment_path.write_text(line + "\n", encoding="utf-8")
+    environment_path.chmod(0o600)
+
+    with pytest.raises(SettingsError, match=message):
+        load_protected_environment(environment_path)

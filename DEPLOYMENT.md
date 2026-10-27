@@ -25,6 +25,11 @@ service account. Telegram session files and durable state will live outside the
 Git checkout with restrictive permissions and backups. No credential or session
 belongs in an image, repository, command history, or log.
 
+The loader now enforces service-user ownership, regular-file type, no symlink,
+and mode `0600` or stricter. [.env.example](.env.example) documents required names
+without values. VM setup must create the populated file outside the checkout and
+must never pass PIN/TOTP/session credentials as command-line arguments.
+
 The runtime database is SQLite in WAL mode. Offline maintenance is exposed as
 `codexbot-db integrity`, `codexbot-db backup`, and `codexbot-db restore-test`.
 Production scheduling, encrypted backup destination, retention, file ownership,

@@ -42,8 +42,11 @@ separately approved live test.
   stale/future rejection, size/checksum corruption detection, restrictive file
   modes, immutable hash names, and bounded snapshot pruning. Smoke-test the real
   refresh/status CLI against the public master without credentials.
+- Verify strict environment syntax, known/duplicate keys, TEST default, explicit
+  segment flags and IDs, positive freshness, invalid modes, owner-only file mode,
+  symlink rejection, secret redaction, and checker-policy construction.
 
-Current result: 102 tests pass. Ruff and strict mypy pass.
+Current result: 120 tests pass. Ruff and strict mypy pass.
 
 ## 2. Remaining parser and reference-rule tests
 

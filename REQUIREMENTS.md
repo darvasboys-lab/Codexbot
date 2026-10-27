@@ -16,6 +16,11 @@ answer. Code must not turn an open decision into an implicit default.
 - Production deployment and a live order test each need explicit approval.
 - Monitor multiple configured Telegram groups, including a test group. Settings
   live in one protected environment file; restart-to-apply is acceptable.
+- The protected environment file must be a regular, non-symlink file owned by the
+  service user with no group/world permissions. Reject unknown or duplicate keys,
+  missing IDs, zero IDs, invalid booleans, and missing credentials. Never display
+  Telegram API hash, phone, Dhan client ID, PIN, or TOTP secret in object/log
+  representations.
 - Process only `BUY` initially. Classify and log `SELL`/`EXIT` without execution.
   Ignore edits/deletions after processing.
 - Recognize the supplied compact stock-option form

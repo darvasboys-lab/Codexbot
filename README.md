@@ -56,6 +56,14 @@ before activation, stores SHA-256 versioned snapshots with `0600` permissions,
 switches the current pointer atomically, preserves the last-known-good version on
 failure, verifies age/size/checksum when loading, and prunes inactive snapshots.
 
+Runtime configuration comes from one owner-only regular environment file. The
+loader rejects symlinks, group/world permissions, unknown/duplicate keys, invalid
+IDs, and missing values. Only `CODEXBOT_MODE` defaults, and it defaults to `TEST`;
+equity/F&O activation, groups, source IDs, paths, snapshot age, Telegram values,
+and Dhan TOTP credentials must be explicit. Secret representations are redacted.
+See [.env.example](.env.example); keep the populated file outside Git with mode
+`0600`.
+
 Passing these checks produces `PASSED_CORE`, never “valid order” or “trade
 ready.” Applying the Yahoo quote to an entry, equity price percentage, sizing,
 funds, risk, mode, emergency stop, and broker-reconciliation gates remain

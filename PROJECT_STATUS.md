@@ -36,6 +36,9 @@ Status date: 2026-10-27 (Asia/Kolkata)
 - Bounded public instrument-master downloader and atomic cache with file locking,
   schema validation before activation, SHA-256 identity, restrictive permissions,
   age/size/checksum verification, last-known-good preservation, and pruning CLI.
+- Strict one-file runtime configuration with TEST-only mode default, explicit
+  active flags/groups/source IDs/paths/freshness, owner/mode/symlink checks,
+  typed Telegram and Dhan TOTP credentials, and redacted secret representations.
 - Structured reason codes and explicit remaining-gate list.
 - Structural safety boundary: the package contains no broker client, order model,
   fill model, holdings model, or simulator; `trade_ready` is always false.
@@ -70,6 +73,8 @@ Status date: 2026-10-27 (Asia/Kolkata)
 - `darvas_script-main.zip` was reviewed by SHA-256; no source file or unapproved
   rule was reused.
 - No Dhan or Telegram credential has been requested, stored, or tested.
+- `.env.example` contains names and blank credential fields only; populated
+  runtime settings remain excluded from Git.
 - Yahoo integration is covered by injected-response unit tests. A read-only
   `RELIANCE.NS` request returned a timestamped INR response on 2026-10-27; it was
   a connectivity smoke check, not trading evidence. Quote-age limits remain unset.
