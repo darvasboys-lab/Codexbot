@@ -11,7 +11,7 @@ import shutil
 import sqlite3
 import tempfile
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -37,6 +37,8 @@ class SignalReceipt:
     telegram_message_id: int
     sent_at: datetime
     first_durable_received_at: datetime
+    # Per-call receipt status, not stored in or compared as part of the immutable receipt.
+    is_redelivery: bool = field(default=False, compare=False)
 
 
 @dataclass(frozen=True, slots=True)
@@ -121,7 +123,7 @@ class SQLiteJournal:
                     occurred_at=self._now(),
                 )
                 connection.commit()
-                return _receipt_from_row(existing)
+                return replace(_receipt_from_row(existing), is_redelivery=True)
 
             durable_at = self._now()
             cursor = connection.execute(
