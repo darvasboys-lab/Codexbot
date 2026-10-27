@@ -49,6 +49,12 @@ Sources:
 - [Dhan Market Quote](https://dhanhq.co/docs/v2/market-quote/)
 - [Dhan live market feed](https://dhanhq.co/docs/v2/live-market-feed/)
 
+Udit requested Yahoo Finance for equity prices. Yahoo's official coverage page
+states its data is informational and not intended for trading; it lists NSE as
+real-time and BSE as delayed by 15 minutes. Yahoo may be considered only as an
+optional TEST/dashboard comparison. It is not accepted as the authoritative LIVE
+entry source. See `docs/REFERENCE_REVIEW.md` for the archive-specific finding.
+
 ## Instruments, tick sizes, lots, and MTF
 
 The official instrument master contains fields for security ID, exchange/segment,

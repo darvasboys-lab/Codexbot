@@ -50,8 +50,10 @@ answer. Code must not turn an open decision into an implicit default.
 
 ## Open decisions — implementation blocked where affected
 
-1. **Reference rules and examples:** provide `darvas_script-main.zip` and real,
-   redacted signal examples before parsing rules are implemented or reused.
+1. **Reference rules and examples:** `darvas_script-main.zip` has been reviewed;
+   no code was copied. Confirm the candidate formats in
+   `docs/REFERENCE_REVIEW.md` and provide real, redacted messages before parsing
+   rules are implemented.
 2. **Source identity and clock skew:** define whether an allowed group/channel
    alone is trusted, or whether permitted sender/admin IDs must also match; supply
    the permitted future timestamp tolerance for the 60-second freshness check;
@@ -60,8 +62,11 @@ answer. Code must not turn an open decision into an implicit default.
    option strikes and expiries; define whether the 20 seconds starts at Telegram
    send time, first receipt time, or durable-processing time and how restart races
    are handled.
-4. **Equity quote:** choose the permitted Dhan price endpoint/feed and maximum
-   quote age. Supply the percentage above market.
+4. **Equity quote:** Udit requested Yahoo Finance on 2026-10-27. Yahoo officially
+   labels its data informational and not intended for trading, with BSE delayed by
+   15 minutes, so it cannot be the authoritative LIVE source. Confirm whether
+   Yahoo should be TEST/dashboard-only and choose a documented Dhan source for
+   LIVE validation. Supply maximum quote ages and the percentage above market.
 5. **Option tick rounding:** approve the exact rule. A safe candidate is to round
    down to the nearest valid tick so the price never exceeds `signal × 1.04`.
 6. **Sizing priority:** choose fixed shares/lots versus budget when both are

@@ -47,6 +47,7 @@ Read these before making changes:
 - [Architecture](docs/ARCHITECTURE.md)
 - [Risk register](docs/RISKS.md)
 - [Test plan](docs/TEST_PLAN.md)
+- [Reference archive review](docs/REFERENCE_REVIEW.md)
 
 ## Safety boundary
 

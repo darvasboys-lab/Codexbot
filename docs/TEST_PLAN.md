@@ -22,10 +22,11 @@ Current result: 33 tests pass. Ruff and strict mypy pass.
 
 ## 2. Parser and reference-rule tests
 
-Blocked until Udit supplies `darvas_script-main.zip` and redacted real messages.
-For each approved format, keep exact positive and negative examples. Confirm
-edits/deletions do not reprocess a completed message. Fuzz malformed text and prove
-it cannot silently become a BUY.
+The reference archive has been reviewed, but parsing remains blocked until Udit
+approves its candidate formats and supplies redacted real messages. For each
+approved format, keep exact positive and negative examples. Confirm edits/deletions
+do not reprocess a completed message. Fuzz malformed text and prove it cannot
+silently become a BUY.
 
 ## 3. Durable journal and restart tests
 

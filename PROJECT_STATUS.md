@@ -15,6 +15,8 @@ Status date: 2026-10-27 (Asia/Kolkata)
 - Structural safety boundary: the package contains no broker client, order model,
   fill model, holdings model, or simulator; `trade_ready` is always false.
 - Automated unit tests for implemented behavior and safety boundaries.
+- Completed reference-archive review with no source reuse; candidate formats,
+  conflicts, and rejected legacy behavior are documented.
 
 ## Verified in this review
 
@@ -26,7 +28,7 @@ Status date: 2026-10-27 (Asia/Kolkata)
 
 ## Planned, blocked by inputs or approval
 
-- Reference archive review and real-message parser.
+- Approval of candidate reference formats and the real-message parser.
 - Exact duplicate detection.
 - Telegram listener/session handling and authenticated operator feedback.
 - Read-only Dhan instrument, quote, funds, margin, order, trade, and position
@@ -40,8 +42,8 @@ Status date: 2026-10-27 (Asia/Kolkata)
 
 ## Evidence and limitations
 
-- `darvas_script-main.zip` is not currently available in the workspace, so no
-  reference rule has been reused.
+- `darvas_script-main.zip` was reviewed by SHA-256; no source file or unapproved
+  rule was reused.
 - No Dhan or Telegram credential has been requested, stored, or tested.
 - Official BSE calendar and exchange-specific algo materials have not yet been
   verified; BSE remains blocked beyond offline core work.
