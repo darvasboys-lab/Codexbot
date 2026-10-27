@@ -81,6 +81,22 @@ class SignalProcessor:
             telegram_message_id=envelope.telegram_message_id,
             sent_at=envelope.sent_at,
         )
+        if receipt.is_redelivery:
+            # A replay is never re-evaluated, even if the original claim is old,
+            # the payload changed, or the first attempt ended before its final audit.
+            # The journal has already appended SIGNAL_REDELIVERED atomically.
+            return ProcessingResult(
+                receipt=receipt,
+                parsed=self._parser.parse(None),
+                instrument=None,
+                report=CheckReport(
+                    disposition=CheckDisposition.REJECTED,
+                    reasons=(ReasonCode.REDELIVERED_MESSAGE,),
+                    pending_gates=(),
+                    execution_mode=self._checker.execution_mode,
+                ),
+                duplicate_claim=None,
+            )
         parsed = self._parser.parse(envelope.text)
         self._record_parse(receipt, parsed)
         instrument = (
