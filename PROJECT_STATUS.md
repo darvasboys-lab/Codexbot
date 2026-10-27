@@ -47,7 +47,7 @@ Status date: 2026-10-27 (Asia/Kolkata)
 - Structured reason codes and explicit remaining-gate list.
 - Structural safety boundary: the package contains no broker client, order model,
   fill model, holdings model, or simulator; `trade_ready` is always false.
-- Automated unit tests for implemented behavior and safety boundaries.
+- Automated unit tests for implemented behavior and safety boundaries; PR #1 adds two replay/restart regression tests (130 total), with Ruff, strict mypy, and pytest passing in GitHub Actions.
 - Completed reference-archive review with no source reuse; candidate formats,
   conflicts, and rejected legacy behavior are documented.
 
@@ -58,6 +58,7 @@ Status date: 2026-10-27 (Asia/Kolkata)
   LIVE blocker and open broker questions are recorded in `DHAN_API.md`.
 - The locked local development environment installs successfully. Ruff, strict
   mypy, and the full unit suite pass; exact results are kept in the test plan.
+- PR #1 replay-safety change passed GitHub Actions checks; review/merge remains pending.
 
 ## Planned, blocked by inputs or approval
 
