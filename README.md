@@ -3,9 +3,10 @@
 Codexbot is a new single-operator Telegram-to-Dhan trading bot for Udit. The
 repository contains a deterministic signal checker, a SQLite audit/deduplication
 journal, a conservative Telegram text parser, and a read-only Yahoo Finance
-equity quote adapter. A TEST-safe processor composes durable receipt, parsing,
-checking, audit, and option deduplication. It cannot place broker orders, create
-fills, or simulate holdings.
+equity quote adapter. A read-only resolver consumes Dhan's official detailed
+instrument-master CSV. A TEST-safe processor composes durable receipt, parsing,
+resolution, checking, audit, and option deduplication. It cannot place broker
+orders, create fills, or simulate holdings.
 
 ## Current behavior
 
@@ -43,6 +44,12 @@ creates a claim only after the currently implemented source, freshness, BUY,
 segment, listing, stock-option identity, unique-contract, canonical-underlying,
 and price checks pass. A corrected signal can therefore claim immediately after
 an invalid one. Future deterministic gates must be inserted before this claim.
+
+The instrument resolver validates the documented CSV schema and eligible rows,
+uses `OPTSTK` versus `OPTIDX` metadata instead of symbol guesses, requires one
+matching contract, retains the canonical underlying security ID, and exposes lot,
+expiry, exchange, and Dhan's raw tick-size value. It does not convert that raw
+tick value into a price increment until Dhan's units are verified.
 
 Passing these checks produces `PASSED_CORE`, never “valid order” or “trade
 ready.” Applying the Yahoo quote to an entry, equity price percentage, sizing,

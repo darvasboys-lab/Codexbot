@@ -7,7 +7,7 @@ trades. A report that passes this early core is not trade-ready.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from enum import StrEnum
 
@@ -143,6 +143,10 @@ class InstrumentFacts:
     security_id: str | None
     unique_contract: bool
     canonical_underlying_id: str | None = None
+    exchange: str | None = None
+    lot_size: Decimal | None = None
+    tick_size_raw: Decimal | None = None
+    expiry_date: date | None = None
 
 
 @dataclass(frozen=True, slots=True)

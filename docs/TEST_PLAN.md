@@ -34,8 +34,12 @@ separately approved live test.
   duplicate claim for unauthorized, stale, unlisted, ambiguous-contract, or
   index candidates. Verify a correction after rejection can claim and that a
   valid claim blocks another strike, price, and CE/PE on the same underlying.
+- Verify official detailed-master schema validation, malformed eligible-row
+  failure, CDSL canonical option resolution, omitted/explicit month behavior,
+  uniqueness rejection, disabled/expired listing facts, verified SENSEX index
+  classification, and NSE/BSE equity ambiguity with an explicit exchange filter.
 
-Current result: 84 tests pass. Ruff and strict mypy pass.
+Current result: 96 tests pass. Ruff and strict mypy pass.
 
 ## 2. Remaining parser and reference-rule tests
 

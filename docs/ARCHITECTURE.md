@@ -40,15 +40,18 @@ later adds a gate; this list is never evidence that order submission is authoriz
   non-actionable. It does not decide listing or index identity.
 - **Rule engine:** deterministic checks with versioned reason codes. AI cannot
   override it.
-- **TEST-safe processor:** composes receipt, parsing, caller-supplied instrument
-  facts, checking, audit, and option deduplication. It has no broker dependency or
-  order method. Only a candidate passing all currently implemented deterministic
-  gates reaches the atomic claim.
-- **Dhan read model:** instruments, funds/margins, orders, trades, and positions
-  from documented read-only interfaces. The instrument resolver must
-  prove that the normalized symbol/contract fields bind to the returned canonical
-  security ID; this early checker accepts resolver facts but cannot prove that
-  binding itself.
+- **TEST-safe processor:** composes receipt, parsing, an injected read-only
+  resolver, checking, audit, and option deduplication. It has no broker dependency
+  or order method. Only a candidate passing all currently implemented
+  deterministic gates reaches the atomic claim.
+- **Dhan instrument resolver:** loads the official detailed CSV from a local
+  snapshot, validates its schema and eligible rows, and binds parsed contract
+  fields to canonical security and underlying IDs. `OPTSTK` and `OPTIDX` decide
+  instrument kind. It rejects no match, multiple matches, disabled buying,
+  expiration, and cross-exchange equity ambiguity. Download/cache rotation is a
+  separate read-only adapter still to be implemented.
+- **Dhan account read model:** funds/margins, orders, trades, and positions from
+  documented read-only interfaces.
 - **Risk engine:** configured caps and portfolio-aware entry authorization.
 - **Execution/reconciliation:** LIVE-only order intents, duplicate-submission
   controls, state reconciliation, bounded partial-fill retry, and protection
@@ -109,3 +112,18 @@ Rejected candidates create no claim and do not reserve or extend the window. A
 corrected candidate inside 20 seconds can claim if no valid candidate claimed
 first. Future deterministic validation stages must be composed before the claim
 to preserve this rule.
+
+## Instrument-master boundary
+
+The resolver accepts only the official detailed header fields documented by Dhan.
+For an omitted option month it uses the message's Asia/Kolkata calendar month and
+year. An explicit month without a year is not assigned a year; all listed matches
+for that month remain candidates, and more than one fails uniqueness. A contract
+is marked listed for this offline gate only when the current master says
+`BUY_SELL_INDICATOR=A` and its expiry date has not passed. Session status and
+exchange controls remain later gates.
+
+The detailed CSV's `TICK_SIZE` is stored as `tick_size_raw`. Current rows contain
+values such as `5.0000` while displayed price limits use decimal rupees. The code
+does not infer a paise/rupee conversion. Tick rounding remains blocked until the
+unit is verified.

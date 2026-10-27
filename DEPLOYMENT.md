@@ -30,6 +30,12 @@ The runtime database is SQLite in WAL mode. Offline maintenance is exposed as
 Production scheduling, encrypted backup destination, retention, file ownership,
 disk alerts, and recovery objectives will be set in the VM plan.
 
+The VM will also need an atomic local cache of Dhan's public detailed instrument
+master. The refresh job must validate schema and eligible rows before replacing a
+last-known-good snapshot, record source time/checksum, and fail closed when the
+snapshot exceeds the still-unset freshness limit. No large master file belongs in
+Git.
+
 ## Inputs needed before VM work
 
 - GCP project and billing context;

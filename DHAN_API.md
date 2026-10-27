@@ -67,9 +67,30 @@ The official instrument master contains fields for security ID, exchange/segment
 instrument type, expiry, strike, option type, lot units, tick size, and MTF
 leverage for eligible equities. Contract resolution must use this canonical data
 and reject stale, missing, unlisted, or non-unique matches. Index rejection must
-come from verified instrument metadata, not symbol-name guesses. A future resolver
-must also prove that the requested symbol/contract fields bind to the returned
+come from verified instrument metadata, not symbol-name guesses. The resolver
+must prove that the requested symbol/contract fields bind to the returned
 security ID; a nonblank ID by itself is insufficient.
+
+The implemented read-only resolver follows the documented **detailed** CSV at
+`https://images.dhan.co/api-data/api-scrip-master-detailed.csv`. On 27 October
+2026 the official file header included `EXCH_ID`, `SEGMENT`, `SECURITY_ID`,
+`INSTRUMENT`, `UNDERLYING_SECURITY_ID`, `UNDERLYING_SYMBOL`, `LOT_SIZE`,
+`SM_EXPIRY_DATE`, `STRIKE_PRICE`, `OPTION_TYPE`, `TICK_SIZE`, `EXPIRY_FLAG`,
+`BUY_SELL_INDICATOR`, and `MTF_LEVERAGE`. The implementation fails closed if
+required columns disappear or eligible NSE/BSE equity/derivative rows are
+malformed.
+
+A read-only full-file check on that date uniquely resolved `CDSL 1400CE OCT` to
+NSE option security ID `62508`, underlying security ID `21174`, expiry
+2026-10-27, and lot size 475. It classified `SENSEX 74500CE` as `OPTIDX` on BSE,
+which the deterministic checker rejects. These values are time-sensitive evidence,
+not pinned trading configuration.
+
+The detailed file returned raw `TICK_SIZE` values such as `5.0000` for those
+option rows and `10.0000` for the reviewed NSE equity row. The official page calls
+the field the minimum decimal point but does not explain the conversion needed by
+order-price units. Codexbot therefore stores `tick_size_raw` and does not use it
+for rounding yet.
 
 The Funds & Margin documentation provides funds and margin-calculator endpoints,
 including `CNC`, `MARGIN`, and `MTF` product types. A documented product enum does

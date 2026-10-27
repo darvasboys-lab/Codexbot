@@ -56,6 +56,15 @@ answer. Code must not turn an open decision into an implicit default.
 - Support NSE/BSE equities. Equity entry uses a validated current price plus a
   setup percentage and a `LIMIT` order. Product is delivery or MTF, selected in
   setup.
+- Resolve instruments from Dhan's official detailed instrument-master schema.
+  Require exact NSE/BSE exchange metadata, instrument type, security ID,
+  underlying security ID for stock options, option type, strike, expiry, positive
+  lot size, and a unique match. Use `OPTSTK`/`OPTIDX` metadata to reject indexes;
+  never classify an index from its symbol text alone.
+- When an option month is omitted, restrict resolution to the current
+  Asia/Kolkata calendar month and year. When a month is present without a year,
+  do not guess the year: match listed contracts for that month and reject unless
+  exactly one remains.
 - Use Yahoo Finance for equity market prices for now. The adapter must retain the
   Yahoo market timestamp and local receipt timestamp and fail closed on missing,
   malformed, non-positive, or non-unique responses. No other market-data API is
@@ -94,6 +103,8 @@ answer. Code must not turn an open decision into an implicit default.
    can pass.
 3. **Option tick rounding:** approve the exact rule. A safe candidate is to round
    down to the nearest valid tick so the price never exceeds `signal × 1.04`.
+   Dhan's detailed master currently supplies raw values such as `5.0000`; verify
+   their price-unit conversion from current official/broker guidance before use.
 4. **Sizing priority:** choose fixed shares/lots versus budget when both are
    configured; decide whether insufficient funds always rejects or may reduce
    quantity; define the role of minimum-trade-funds.
@@ -124,6 +135,10 @@ answer. Code must not turn an open decision into an implicit default.
     encryption, recovery target, and restore-drill schedule before VM setup.
 16. **Names and display:** confirm whether “Sapphire Bot” from the screenshot is
     the product name or only a visual reference.
+17. **Equity exchange selection:** the same equity symbol may resolve on both NSE
+    and BSE. Choose whether setup fixes an exchange, each signal must specify it,
+    or an explicit preference rule applies. The resolver currently rejects the
+    ambiguity rather than selecting an exchange.
 
 ## Supplied dashboard references
 

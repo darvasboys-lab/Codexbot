@@ -28,6 +28,11 @@ Status date: 2026-10-27 (Asia/Kolkata)
   checking, append-only audit, and atomic option deduplication. Rejected source,
   freshness, index, listing, price, identity, and ambiguity cases create no
   duplicate claim; a later corrected candidate can claim immediately.
+- Read-only Dhan detailed-instrument-master resolver with strict schema/row
+  validation, NSE/BSE filters, equity ambiguity rejection, current-month handling,
+  stock-option versus index classification, unique-contract resolution, and
+  canonical security/underlying IDs. Lot, expiry, exchange, and raw Dhan tick
+  values are retained without guessing tick units.
 - Structured reason codes and explicit remaining-gate list.
 - Structural safety boundary: the package contains no broker client, order model,
   fill model, holdings model, or simulator; `trade_ready` is always false.
@@ -47,11 +52,10 @@ Status date: 2026-10-27 (Asia/Kolkata)
 
 - Equity BUY, SELL, expiry-omitted non-index stock-option, and additional
   malformed parser examples.
-- Read-only instrument-resolver adapter feeding canonical facts into the
-  implemented processor.
+- Scheduled instrument-master download, freshness/checksum policy, last-known-good
+  recovery, and atomic cache replacement.
 - Telegram listener/session handling and authenticated operator feedback.
-- Read-only Dhan instrument, funds, margin, order, trade, and position
-  connectivity.
+- Read-only Dhan funds, margin, order, trade, and position connectivity.
 - Journal orchestration, retention/backup scheduling, and restart reconciliation.
 - Pricing, sizing, funds, risk, emergency-stop, execution, partial-fill/retry, and
   protection logic.
@@ -67,6 +71,9 @@ Status date: 2026-10-27 (Asia/Kolkata)
 - Yahoo integration is covered by injected-response unit tests. A read-only
   `RELIANCE.NS` request returned a timestamped INR response on 2026-10-27; it was
   a connectivity smoke check, not trading evidence. Quote-age limits remain unset.
+- The resolver loaded Dhan's 2026-10-27 public detailed master. It uniquely
+  resolved the supplied CDSL October 1400 CE to NSE security `62508`, underlying
+  `21174`, lot `475`, and classified the supplied SENSEX option as a BSE index.
 - Official BSE calendar and exchange-specific algo materials have not yet been
   verified; BSE remains blocked beyond offline core work.
 - No broker connectivity, VM deployment, order submission, or production

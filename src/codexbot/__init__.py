@@ -1,6 +1,13 @@
 """Safe, deterministic core for Codexbot."""
 
 from codexbot.checking import SignalChecker
+from codexbot.instruments import (
+    DhanInstrument,
+    DhanInstrumentResolver,
+    Exchange,
+    InstrumentMasterError,
+    InstrumentResolution,
+)
 from codexbot.market_data import (
     EquityQuote,
     MarketDataError,
@@ -22,18 +29,29 @@ from codexbot.models import (
 )
 from codexbot.parsing import OptionType, ParsedMessage, ParseReason, TelegramMessageParser
 from codexbot.persistence import DuplicateClaimResult, SignalReceipt, SQLiteJournal
-from codexbot.processing import ProcessingResult, SignalProcessor, TelegramEnvelope
+from codexbot.processing import (
+    InstrumentResolver,
+    ProcessingResult,
+    SignalProcessor,
+    TelegramEnvelope,
+)
 
 __all__ = [
     "Action",
     "CheckDisposition",
     "CheckReport",
     "CheckerPolicy",
+    "DhanInstrument",
+    "DhanInstrumentResolver",
+    "DuplicateClaimResult",
     "ExecutionMode",
     "EquityQuote",
-    "DuplicateClaimResult",
+    "Exchange",
     "InstrumentFacts",
     "InstrumentKind",
+    "InstrumentMasterError",
+    "InstrumentResolution",
+    "InstrumentResolver",
     "MarketDataError",
     "NormalizedSignal",
     "OptionType",

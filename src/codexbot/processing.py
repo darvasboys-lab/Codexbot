@@ -1,16 +1,19 @@
 """TEST-safe composition of receipt, parsing, checking, audit, and option deduplication.
 
 The processor contains no broker adapter and cannot submit, modify, or cancel an
-order. Instrument facts are supplied by the caller and are treated as read-only.
+order. Instrument facts come from an injected read-only resolver.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
+from typing import Protocol
+from zoneinfo import ZoneInfo
 
 from codexbot.checking import SignalChecker
 from codexbot.models import (
+    Action,
     CheckDisposition,
     CheckReport,
     InstrumentFacts,
@@ -21,6 +24,12 @@ from codexbot.models import (
 )
 from codexbot.parsing import ParsedMessage, TelegramMessageParser
 from codexbot.persistence import DuplicateClaimResult, SignalReceipt, SQLiteJournal
+
+_INDIA_TIME = ZoneInfo("Asia/Kolkata")
+
+
+class InstrumentResolver(Protocol):
+    def resolve(self, parsed: ParsedMessage, *, as_of: date) -> InstrumentFacts: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,6 +47,7 @@ class TelegramEnvelope:
 class ProcessingResult:
     receipt: SignalReceipt
     parsed: ParsedMessage
+    instrument: InstrumentFacts | None
     report: CheckReport
     duplicate_claim: DuplicateClaimResult | None
 
@@ -55,15 +65,16 @@ class SignalProcessor:
         journal: SQLiteJournal,
         parser: TelegramMessageParser,
         checker: SignalChecker,
+        instrument_resolver: InstrumentResolver,
     ) -> None:
         self._journal = journal
         self._parser = parser
         self._checker = checker
+        self._instrument_resolver = instrument_resolver
 
     def process(
         self,
         envelope: TelegramEnvelope,
-        instrument: InstrumentFacts | None,
     ) -> ProcessingResult:
         receipt = self._journal.record_signal_receipt(
             source_group_id=envelope.source_group_id,
@@ -72,6 +83,16 @@ class SignalProcessor:
         )
         parsed = self._parser.parse(envelope.text)
         self._record_parse(receipt, parsed)
+        instrument = (
+            self._instrument_resolver.resolve(
+                parsed,
+                as_of=envelope.sent_at.astimezone(_INDIA_TIME).date(),
+            )
+            if parsed.action is Action.BUY
+            else None
+        )
+        if instrument is not None:
+            self._record_instrument(receipt, instrument)
 
         signal = NormalizedSignal(
             source_group_id=envelope.source_group_id,
@@ -108,6 +129,7 @@ class SignalProcessor:
         return ProcessingResult(
             receipt=receipt,
             parsed=parsed,
+            instrument=instrument,
             report=report,
             duplicate_claim=duplicate_claim,
         )
@@ -127,6 +149,27 @@ class SignalProcessor:
                 "parse_reason": parsed.reason.value,
                 "segment": parsed.segment.value if parsed.segment else None,
                 "symbol": parsed.symbol,
+            },
+        )
+
+    def _record_instrument(self, receipt: SignalReceipt, instrument: InstrumentFacts) -> None:
+        self._journal.append_audit_event(
+            event_type="INSTRUMENT_RESOLVED",
+            entity_type="signal_receipt",
+            entity_id=str(receipt.id),
+            state=instrument.kind.value,
+            details={
+                "canonical_underlying_id": instrument.canonical_underlying_id,
+                "exchange": instrument.exchange,
+                "expiry_date": (
+                    instrument.expiry_date.isoformat() if instrument.expiry_date else None
+                ),
+                "listed": instrument.listed,
+                "lot_size": _decimal_text(instrument.lot_size),
+                "resolved": instrument.resolved,
+                "security_id": instrument.security_id,
+                "tick_size_raw": _decimal_text(instrument.tick_size_raw),
+                "unique_contract": instrument.unique_contract,
             },
         )
 
