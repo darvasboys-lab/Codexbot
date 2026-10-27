@@ -9,7 +9,9 @@ description = "Deterministic signal-checking core for Udit's Telegram-to-Dhan bo
 readme = "README.md"
 requires-python = ">=3.12"
 authors = [{ name = "Udit" }]
-dependencies = []
+dependencies = [
+  "telethon>=1.42,<2",
+]
 
 [project.scripts]
 codexbot-db = "codexbot.db_maintenance:main"

@@ -45,8 +45,12 @@ separately approved live test.
 - Verify strict environment syntax, known/duplicate keys, TEST default, explicit
   segment flags and IDs, positive freshness, invalid modes, owner-only file mode,
   symlink rejection, secret redaction, and checker-policy construction.
+- Verify Telegram envelope extraction, marked forwarded-channel IDs, hidden
+  origins, missing sender identity, session file/directory permission checks,
+  sidecar hardening, unauthorized-session refusal, authorized lifecycle cleanup,
+  and NewMessage-only registration with a fake client.
 
-Current result: 120 tests pass. Ruff and strict mypy pass.
+Current result: 128 tests pass. Ruff and strict mypy pass.
 
 ## 2. Remaining parser and reference-rule tests
 

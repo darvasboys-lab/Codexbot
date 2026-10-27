@@ -30,6 +30,12 @@ and mode `0600` or stricter. [.env.example](.env.example) documents required nam
 without values. VM setup must create the populated file outside the checkout and
 must never pass PIN/TOTP/session credentials as command-line arguments.
 
+Telegram authorization must occur in a separate operator-attended setup step.
+The unattended service refuses a missing or unauthorized session. The session
+parent directory must be `0700`; the session and SQLite sidecars must be `0600`.
+The session path remains outside the checkout and backup/log collection must
+exclude its contents.
+
 The runtime database is SQLite in WAL mode. Offline maintenance is exposed as
 `codexbot-db integrity`, `codexbot-db backup`, and `codexbot-db restore-test`.
 Production scheduling, encrypted backup destination, retention, file ownership,

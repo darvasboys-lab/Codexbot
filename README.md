@@ -64,6 +64,12 @@ and Dhan TOTP credentials must be explicit. Secret representations are redacted.
 See [.env.example](.env.example); keep the populated file outside Git with mode
 `0600`.
 
+The Telegram adapter uses one Telethon user session and registers only
+`NewMessage` for configured groups. It extracts Telegram's marked group,
+sender/channel, and forward-origin IDs, hands the event to durable processing,
+and never handles edits or deletions. The service refuses interactive login and
+requires an already-authorized owner-only session created during separate setup.
+
 Passing these checks produces `PASSED_CORE`, never “valid order” or “trade
 ready.” Applying the Yahoo quote to an entry, equity price percentage, sizing,
 funds, risk, mode, emergency stop, and broker-reconciliation gates remain

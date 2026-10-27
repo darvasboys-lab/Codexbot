@@ -39,6 +39,10 @@ Status date: 2026-10-27 (Asia/Kolkata)
 - Strict one-file runtime configuration with TEST-only mode default, explicit
   active flags/groups/source IDs/paths/freshness, owner/mode/symlink checks,
   typed Telegram and Dhan TOTP credentials, and redacted secret representations.
+- Telethon NewMessage-only listener for one pre-authorized user session, with
+  configured-chat subscription, sender/channel and forwarded-origin extraction,
+  hidden-origin rejection support, finite reconnect settings, protected session
+  files/sidecars, worker-thread processing, and health/error state.
 - Structured reason codes and explicit remaining-gate list.
 - Structural safety boundary: the package contains no broker client, order model,
   fill model, holdings model, or simulator; `trade_ready` is always false.
@@ -59,7 +63,8 @@ Status date: 2026-10-27 (Asia/Kolkata)
 - Equity BUY, SELL, expiry-omitted non-index stock-option, and additional
   malformed parser examples.
 - Production instrument refresh schedule and maximum accepted snapshot age.
-- Telegram listener/session handling and authenticated operator feedback.
+- Interactive Telegram session setup and live credentialed listener verification;
+  authenticated operator feedback remains planned.
 - Read-only Dhan funds, margin, order, trade, and position connectivity.
 - Journal orchestration, retention/backup scheduling, and restart reconciliation.
 - Pricing, sizing, funds, risk, emergency-stop, execution, partial-fill/retry, and

@@ -53,6 +53,14 @@ from codexbot.settings import (
     configuration_from_mapping,
     load_protected_environment,
 )
+from codexbot.telegram import (
+    TelegramHealth,
+    TelegramListenerError,
+    TelethonListener,
+    harden_telegram_session,
+    telegram_envelope_from_event,
+    validate_telegram_session,
+)
 
 __all__ = [
     "Action",
@@ -97,8 +105,14 @@ __all__ = [
     "TelegramMessageParser",
     "TelegramEnvelope",
     "TelegramCredentials",
+    "TelegramHealth",
+    "TelegramListenerError",
+    "TelethonListener",
     "YahooExchange",
     "YahooFinanceMarketData",
     "configuration_from_mapping",
+    "harden_telegram_session",
     "load_protected_environment",
+    "telegram_envelope_from_event",
+    "validate_telegram_session",
 ]

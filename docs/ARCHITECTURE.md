@@ -32,8 +32,10 @@ later adds a gate; this list is never evidence that order submission is authoriz
 ## Component boundaries
 
 - **Telegram adapter:** receives message events, reconnects safely, protects
-  session state, provides trusted source metadata, and applies the approved
-  restart/backlog policy once Udit chooses it.
+  session state, provides group/sender/channel/forward metadata, and applies the
+  approved restart/backlog policy once Udit chooses it. The service registers
+  only `NewMessage`, uses finite reconnect attempts, and refuses interactive
+  authorization at startup.
 - **Parser:** conservatively recognizes the supplied compact stock-option BUY and
   two EXIT forms. It preserves the option request and price bounds while treating
   supplied advisory, negated, status/log, and no-caption media examples as
@@ -79,6 +81,16 @@ shell expansion. TEST is the sole default; both segment flags, source identities
 paths, instrument age, Telegram credentials/session path, and Dhan TOTP inputs are
 explicit. Secret value objects render only `<redacted>` and require an explicit
 adapter call to reveal their value.
+
+## Telegram session boundary
+
+The runtime accepts only a pre-authorized Telethon SQLite session in an owner-only
+directory. The session and its journal/WAL/SHM sidecars must be regular,
+non-symlink, service-user-owned files with no group/world access. Service startup
+never requests an OTP or password. Message processing runs outside the async event
+loop and catches per-message errors so one malformed event does not stop intake.
+Health exposes connection, authorization, last receive/process times, and an
+exception class name only; raw messages and exception text are excluded.
 
 ## Persistence decision
 

@@ -21,6 +21,12 @@ answer. Code must not turn an open decision into an implicit default.
   missing IDs, zero IDs, invalid booleans, and missing credentials. Never display
   Telegram API hash, phone, Dhan client ID, PIN, or TOTP secret in object/log
   representations.
+- Use one Telethon user session. The service listens only for new messages in
+  configured groups; it does not register edit/delete handlers. Require an
+  existing authorized session rather than prompting for OTP/password during
+  unattended startup. Protect the session directory and session/journal/WAL/SHM
+  files with owner-only permissions. Preserve marked Telegram IDs and hidden
+  forwarded origins so deterministic source checks can fail closed.
 - Process only `BUY` initially. Classify and log `SELL`/`EXIT` without execution.
   Ignore edits/deletions after processing.
 - Recognize the supplied compact stock-option form
