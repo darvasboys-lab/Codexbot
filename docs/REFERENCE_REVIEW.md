@@ -2,7 +2,7 @@
 
 Reviewed: 2026-10-27 (Asia/Kolkata)
 
-Archive: `darvas_script-main.zip`  
+Archive: `darvas_script-main.zip`
 SHA-256: `02079e46b218241c8a8b8b165f58d8f2386a3c4d1679fcc55d6e74fb36f70c2e`
 
 The archive contains 75 files and describes an older, separate system. Its
@@ -107,4 +107,3 @@ Udit approves; LIVE validation should use a documented broker/exchange-authorize
 source.
 
 Official source: [Yahoo Finance exchanges and data providers](https://help.yahoo.com/kb/finance-for-web/exchanges-data-providers-yahoo-finance-sln2310.html)
-
