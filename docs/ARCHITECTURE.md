@@ -48,8 +48,13 @@ later adds a gate; this list is never evidence that order submission is authoriz
   snapshot, validates its schema and eligible rows, and binds parsed contract
   fields to canonical security and underlying IDs. `OPTSTK` and `OPTIDX` decide
   instrument kind. It rejects no match, multiple matches, disabled buying,
-  expiration, and cross-exchange equity ambiguity. Download/cache rotation is a
-  separate read-only adapter still to be implemented.
+  expiration, and cross-exchange equity ambiguity.
+- **Instrument cache:** streams the public master into a bounded temporary file,
+  validates before activation, names immutable snapshots by SHA-256, and switches
+  a small pointer atomically under a file lock. Readers verify explicit age,
+  byte count, checksum, path form, schema, and rows. Failed refreshes leave the
+  prior pointer untouched; pruning retains the active and configured previous
+  snapshots.
 - **Dhan account read model:** funds/margins, orders, trades, and positions from
   documented read-only interfaces.
 - **Risk engine:** configured caps and portfolio-aware entry authorization.

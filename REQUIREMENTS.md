@@ -65,6 +65,11 @@ answer. Code must not turn an open decision into an implicit default.
   Asia/Kolkata calendar month and year. When a month is present without a year,
   do not guess the year: match listed contracts for that month and reject unless
   exactly one remains.
+- Cache the public detailed master outside Git. Bound download size, validate the
+  full eligible schema before activation, use SHA-256 versioned snapshots and an
+  atomic current pointer, verify size/checksum/age on load, retain last-known-good
+  data after refresh failure, use restrictive permissions, and keep bounded old
+  snapshots. A stale or corrupt cache fails closed.
 - Use Yahoo Finance for equity market prices for now. The adapter must retain the
   Yahoo market timestamp and local receipt timestamp and fail closed on missing,
   malformed, non-positive, or non-unique responses. No other market-data API is
@@ -139,6 +144,9 @@ answer. Code must not turn an open decision into an implicit default.
     and BSE. Choose whether setup fixes an exchange, each signal must specify it,
     or an explicit preference rule applies. The resolver currently rejects the
     ambiguity rather than selecting an exchange.
+18. **Instrument freshness:** set the maximum age of the active Dhan instrument
+    snapshot and the refresh schedule. The cache requires an explicit age limit
+    and has no implicit production default.
 
 ## Supplied dashboard references
 

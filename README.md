@@ -51,6 +51,11 @@ matching contract, retains the canonical underlying security ID, and exposes lot
 expiry, exchange, and Dhan's raw tick-size value. It does not convert that raw
 tick value into a price increment until Dhan's units are verified.
 
+The instrument cache streams the public master with a size limit, validates it
+before activation, stores SHA-256 versioned snapshots with `0600` permissions,
+switches the current pointer atomically, preserves the last-known-good version on
+failure, verifies age/size/checksum when loading, and prunes inactive snapshots.
+
 Passing these checks produces `PASSED_CORE`, never “valid order” or “trade
 ready.” Applying the Yahoo quote to an entry, equity price percentage, sizing,
 funds, risk, mode, emergency stop, and broker-reconciliation gates remain
@@ -73,6 +78,9 @@ SQLite maintenance commands operate on runtime files outside Git:
 uv run --frozen codexbot-db integrity --database data/codexbot.sqlite3
 uv run --frozen codexbot-db backup --database data/codexbot.sqlite3 --output /backup/codexbot.sqlite3
 uv run --frozen codexbot-db restore-test --backup /backup/codexbot.sqlite3
+uv run --frozen codexbot-instruments --cache-directory data/instruments refresh
+uv run --frozen codexbot-instruments --cache-directory data/instruments status --maximum-age-hours HOURS
+uv run --frozen codexbot-instruments --cache-directory data/instruments prune --keep 2
 ```
 
 The CI workflow runs the same lint, type, and test checks. No credential is

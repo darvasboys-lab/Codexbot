@@ -33,6 +33,9 @@ Status date: 2026-10-27 (Asia/Kolkata)
   stock-option versus index classification, unique-contract resolution, and
   canonical security/underlying IDs. Lot, expiry, exchange, and raw Dhan tick
   values are retained without guessing tick units.
+- Bounded public instrument-master downloader and atomic cache with file locking,
+  schema validation before activation, SHA-256 identity, restrictive permissions,
+  age/size/checksum verification, last-known-good preservation, and pruning CLI.
 - Structured reason codes and explicit remaining-gate list.
 - Structural safety boundary: the package contains no broker client, order model,
   fill model, holdings model, or simulator; `trade_ready` is always false.
@@ -52,8 +55,7 @@ Status date: 2026-10-27 (Asia/Kolkata)
 
 - Equity BUY, SELL, expiry-omitted non-index stock-option, and additional
   malformed parser examples.
-- Scheduled instrument-master download, freshness/checksum policy, last-known-good
-  recovery, and atomic cache replacement.
+- Production instrument refresh schedule and maximum accepted snapshot age.
 - Telegram listener/session handling and authenticated operator feedback.
 - Read-only Dhan funds, margin, order, trade, and position connectivity.
 - Journal orchestration, retention/backup scheduling, and restart reconciliation.
@@ -74,6 +76,9 @@ Status date: 2026-10-27 (Asia/Kolkata)
 - The resolver loaded Dhan's 2026-10-27 public detailed master. It uniquely
   resolved the supplied CDSL October 1400 CE to NSE security `62508`, underlying
   `21174`, lot `475`, and classified the supplied SENSEX option as a BSE index.
+- The real cache CLI downloaded and validated the 36,835,408-byte public master
+  on 2026-10-27 with SHA-256
+  `8f080f9de30960b129974e3cc26dcd066b00957935fb31d3cc9d7a812ec54b5f`.
 - Official BSE calendar and exchange-specific algo materials have not yet been
   verified; BSE remains blocked beyond offline core work.
 - No broker connectivity, VM deployment, order submission, or production

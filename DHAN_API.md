@@ -92,6 +92,13 @@ the field the minimum decimal point but does not explain the conversion needed b
 order-price units. Codexbot therefore stores `tick_size_raw` and does not use it
 for rounding yet.
 
+The credential-free cache CLI was exercised against the public URL on 27 October
+2026. It downloaded 36,835,408 bytes with SHA-256
+`8f080f9de30960b129974e3cc26dcd066b00957935fb31d3cc9d7a812ec54b5f`,
+validated the full eligible master, atomically activated it, and successfully
+reloaded it under an explicit one-hour test limit. That one-hour value was only a
+smoke-test input; production maximum age remains a user decision.
+
 The Funds & Margin documentation provides funds and margin-calculator endpoints,
 including `CNC`, `MARGIN`, and `MTF` product types. A documented product enum does
 not establish that Udit's account or a specific instrument is eligible. Before an

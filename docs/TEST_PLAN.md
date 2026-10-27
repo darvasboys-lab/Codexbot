@@ -38,8 +38,12 @@ separately approved live test.
   failure, CDSL canonical option resolution, omitted/explicit month behavior,
   uniqueness rejection, disabled/expired listing facts, verified SENSEX index
   classification, and NSE/BSE equity ambiguity with an explicit exchange filter.
+- Verify bounded download, validate-before-activate, last-known-good preservation,
+  stale/future rejection, size/checksum corruption detection, restrictive file
+  modes, immutable hash names, and bounded snapshot pruning. Smoke-test the real
+  refresh/status CLI against the public master without credentials.
 
-Current result: 96 tests pass. Ruff and strict mypy pass.
+Current result: 102 tests pass. Ruff and strict mypy pass.
 
 ## 2. Remaining parser and reference-rule tests
 

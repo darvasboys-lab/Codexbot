@@ -1,6 +1,14 @@
 """Safe, deterministic core for Codexbot."""
 
 from codexbot.checking import SignalChecker
+from codexbot.instrument_cache import (
+    DHAN_DETAILED_MASTER_URL,
+    DhanInstrumentMasterCache,
+    DownloadEvidence,
+    InstrumentCacheError,
+    InstrumentSnapshot,
+    LoadedInstrumentMaster,
+)
 from codexbot.instruments import (
     DhanInstrument,
     DhanInstrumentResolver,
@@ -41,18 +49,24 @@ __all__ = [
     "CheckDisposition",
     "CheckReport",
     "CheckerPolicy",
+    "DHAN_DETAILED_MASTER_URL",
     "DhanInstrument",
     "DhanInstrumentResolver",
+    "DhanInstrumentMasterCache",
+    "DownloadEvidence",
     "DuplicateClaimResult",
     "ExecutionMode",
     "EquityQuote",
     "Exchange",
     "InstrumentFacts",
+    "InstrumentCacheError",
     "InstrumentKind",
     "InstrumentMasterError",
     "InstrumentResolution",
     "InstrumentResolver",
+    "InstrumentSnapshot",
     "MarketDataError",
+    "LoadedInstrumentMaster",
     "NormalizedSignal",
     "OptionType",
     "ParsedMessage",
