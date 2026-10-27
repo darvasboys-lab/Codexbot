@@ -61,6 +61,7 @@ class ReasonCode(StrEnum):
     NON_BUY_ACTION = "NON_BUY_ACTION"
     UNRECOGNIZED_MESSAGE = "UNRECOGNIZED_MESSAGE"
     SEGMENT_INACTIVE = "SEGMENT_INACTIVE"
+    SEGMENT_UNRESOLVED = "SEGMENT_UNRESOLVED"
     INDEX_NOT_ALLOWED = "INDEX_NOT_ALLOWED"
     FUTURES_NOT_APPROVED = "FUTURES_NOT_APPROVED"
     INSTRUMENT_REFERENCE_MISSING = "INSTRUMENT_REFERENCE_MISSING"
@@ -72,6 +73,8 @@ class ReasonCode(StrEnum):
     OPTION_PRICE_REQUIRED = "OPTION_PRICE_REQUIRED"
     OPTION_PRICE_INVALID = "OPTION_PRICE_INVALID"
     OPTION_CONTRACT_NOT_UNIQUE = "OPTION_CONTRACT_NOT_UNIQUE"
+    OPTION_UNDERLYING_IDENTITY_MISSING = "OPTION_UNDERLYING_IDENTITY_MISSING"
+    DUPLICATE_SIGNAL = "DUPLICATE_SIGNAL"
 
 
 class PendingGate(StrEnum):
@@ -125,7 +128,7 @@ class NormalizedSignal:
     is_forwarded: bool
     forwarded_from_source_id: int | None
     action: Action
-    segment: Segment
+    segment: Segment | None
     symbol: str | None = None
     stated_price: Decimal | None = None
 
@@ -139,6 +142,7 @@ class InstrumentFacts:
     kind: InstrumentKind
     security_id: str | None
     unique_contract: bool
+    canonical_underlying_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

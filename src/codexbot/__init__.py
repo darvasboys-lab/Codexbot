@@ -16,11 +16,13 @@ from codexbot.models import (
     InstrumentFacts,
     InstrumentKind,
     NormalizedSignal,
+    PendingGate,
     ReasonCode,
     Segment,
 )
 from codexbot.parsing import OptionType, ParsedMessage, ParseReason, TelegramMessageParser
 from codexbot.persistence import DuplicateClaimResult, SignalReceipt, SQLiteJournal
+from codexbot.processing import ProcessingResult, SignalProcessor, TelegramEnvelope
 
 __all__ = [
     "Action",
@@ -37,12 +39,16 @@ __all__ = [
     "OptionType",
     "ParsedMessage",
     "ParseReason",
+    "PendingGate",
     "ReasonCode",
+    "ProcessingResult",
     "Segment",
     "SignalChecker",
+    "SignalProcessor",
     "SignalReceipt",
     "SQLiteJournal",
     "TelegramMessageParser",
+    "TelegramEnvelope",
     "YahooExchange",
     "YahooFinanceMarketData",
 ]

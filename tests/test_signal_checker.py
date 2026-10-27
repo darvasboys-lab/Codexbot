@@ -30,6 +30,7 @@ LISTED_OPTION = InstrumentFacts(
     kind=InstrumentKind.STOCK_OPTION,
     security_id="49081",
     unique_contract=True,
+    canonical_underlying_id="INE002A01018",
 )
 
 
@@ -354,6 +355,23 @@ def test_stock_option_requires_price_and_unique_contract() -> None:
     assert report.disposition is CheckDisposition.REJECTED
     assert ReasonCode.OPTION_PRICE_REQUIRED in report.reasons
     assert ReasonCode.OPTION_CONTRACT_NOT_UNIQUE in report.reasons
+
+
+def test_stock_option_requires_canonical_underlying_identity() -> None:
+    incomplete = InstrumentFacts(
+        resolved=True,
+        listed=True,
+        kind=InstrumentKind.STOCK_OPTION,
+        security_id="49081",
+        unique_contract=True,
+    )
+
+    report = SignalChecker(policy()).check(
+        signal(segment=Segment.FNO, price=Decimal("100")), incomplete
+    )
+
+    assert report.disposition is CheckDisposition.REJECTED
+    assert ReasonCode.OPTION_UNDERLYING_IDENTITY_MISSING in report.reasons
 
 
 @pytest.mark.parametrize(

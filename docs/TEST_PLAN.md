@@ -29,16 +29,21 @@ separately approved live test.
   rejected only by verified index facts; supplied EXIT forms remain non-BUY; and
   analysis, watchlist, future intent, status/log, negated BUY, invalid ranges,
   and captionless media all fail closed.
+- Verify the processing composition persists first receipt, audits parsing and
+  the final decision, requires canonical underlying identity, and creates no
+  duplicate claim for unauthorized, stale, unlisted, ambiguous-contract, or
+  index candidates. Verify a correction after rejection can claim and that a
+  valid claim blocks another strike, price, and CE/PE on the same underlying.
 
-Current result: 72 tests pass. Ruff and strict mypy pass.
+Current result: 84 tests pass. Ruff and strict mypy pass.
 
 ## 2. Remaining parser and reference-rule tests
 
 The supplied option, EXIT, and non-actionable examples are implemented as exact
-fixtures. Equity BUY, SELL, PE, expiry-omitted stock-option, and malformed
-examples remain needed before those forms are expanded. Confirm edits/deletions
-do not reprocess a completed message. Fuzz malformed text and prove it cannot
-silently become a BUY.
+fixtures. Equity BUY, SELL, expiry-omitted non-index stock-option, and additional
+malformed examples remain needed before those forms are expanded. Confirm
+edits/deletions do not reprocess a completed message. Fuzz malformed text and
+prove it cannot silently become a BUY.
 
 ## 3. Remaining durable journal and restart tests
 

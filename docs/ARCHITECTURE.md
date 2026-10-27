@@ -4,13 +4,14 @@
 
 ```text
 Telegram client (one protected session)
+  -> first durable SQLite receipt
   -> source and freshness gate
   -> parser/classifier
-  -> local deterministic validation
+  -> read-only instrument validation
+  -> local deterministic validation and later risk/funds gates
   -> optional AI review (advisory only)
   -> atomic SQLite option duplicate claim
-  -> read-only instrument validation and Yahoo equity quote validation
-  -> sizing, funds/margin, and risk gates
+  -> Yahoo equity quote validation where applicable
   -> TEST report OR LIVE execution gate
   -> Dhan order state reconciliation
   -> fill-based protection management
@@ -39,6 +40,10 @@ later adds a gate; this list is never evidence that order submission is authoriz
   non-actionable. It does not decide listing or index identity.
 - **Rule engine:** deterministic checks with versioned reason codes. AI cannot
   override it.
+- **TEST-safe processor:** composes receipt, parsing, caller-supplied instrument
+  facts, checking, audit, and option deduplication. It has no broker dependency or
+  order method. Only a candidate passing all currently implemented deterministic
+  gates reaches the atomic claim.
 - **Dhan read model:** instruments, funds/margins, orders, trades, and positions
   from documented read-only interfaces. The instrument resolver must
   prove that the normalized symbol/contract fields bind to the returned canonical
@@ -100,3 +105,7 @@ stock-option-family key for 20 seconds inclusive. Strike, expiry, price, and CE/
 are not stored in the key. Only accepted claims start windows, so rejected
 duplicates do not extend a window. `BEGIN IMMEDIATE` serializes the query and
 insert, while an exact key-plus-timestamp unique constraint adds a final guard.
+Rejected candidates create no claim and do not reserve or extend the window. A
+corrected candidate inside 20 seconds can claim if no valid candidate claimed
+first. Future deterministic validation stages must be composed before the claim
+to preserve this rule.

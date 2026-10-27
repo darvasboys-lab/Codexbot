@@ -66,7 +66,9 @@ class SignalChecker:
                 execution_mode=self._policy.execution_mode,
             )
 
-        if signal.segment is Segment.EQUITY and not self._policy.equity_active:
+        if signal.segment is None:
+            reasons.append(ReasonCode.SEGMENT_UNRESOLVED)
+        elif signal.segment is Segment.EQUITY and not self._policy.equity_active:
             reasons.append(ReasonCode.SEGMENT_INACTIVE)
         elif signal.segment is Segment.FNO and not self._policy.fno_active:
             reasons.append(ReasonCode.SEGMENT_INACTIVE)
@@ -89,7 +91,7 @@ class SignalChecker:
             elif instrument.kind is InstrumentKind.UNKNOWN:
                 reasons.append(ReasonCode.INSTRUMENT_KIND_UNSUPPORTED)
 
-            if not _segment_matches(signal.segment, instrument.kind):
+            if signal.segment is not None and not _segment_matches(signal.segment, instrument.kind):
                 reasons.append(ReasonCode.SEGMENT_INSTRUMENT_MISMATCH)
 
             if instrument.kind is InstrumentKind.STOCK_OPTION:
@@ -99,6 +101,11 @@ class SignalChecker:
                     reasons.append(ReasonCode.OPTION_PRICE_INVALID)
                 if not instrument.unique_contract:
                     reasons.append(ReasonCode.OPTION_CONTRACT_NOT_UNIQUE)
+                if (
+                    instrument.canonical_underlying_id is None
+                    or not instrument.canonical_underlying_id.strip()
+                ):
+                    reasons.append(ReasonCode.OPTION_UNDERLYING_IDENTITY_MISSING)
 
         disposition = _disposition(signal.action, reasons)
         pending_gates = _ALL_PENDING_GATES if disposition is CheckDisposition.PASSED_CORE else ()

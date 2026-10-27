@@ -41,6 +41,12 @@ answer. Code must not turn an open decision into an implicit default.
   stock-option family + first durable receipt timestamp. Ignore strike, expiry,
   price, and CE/PE. A signal exactly 20 seconds after an accepted claim is a
   duplicate; re-entry after 20 seconds is permitted.
+- A rejected option candidate does not reserve the duplicate window. Create the
+  atomic claim only after source authentication, freshness, BUY intent, active
+  segment, listed stock-option identity, unique contract, canonical underlying,
+  and valid stated-price checks pass. As later deterministic gates are added,
+  they must also precede the final claim so a rejected candidate never consumes
+  the window.
 - Use SQLite in WAL mode on the single VM. Keep signal receipts, duplicate claims
   and decisions, and audit events append-only. Use atomic transactions for
   duplicate claims and maintain tested integrity, backup, and restore commands.
@@ -78,9 +84,9 @@ answer. Code must not turn an open decision into an implicit default.
 
 1. **Remaining parser examples:** stock-option, EXIT, analysis, watchlist,
    future-intent, status/log, negated-BUY, and chart-only examples were supplied
-   and implemented without archive code. Supply redacted equity BUY, SELL, PE,
-   expiry-omitted stock-option, and malformed-message examples before expanding
-   those forms.
+   and implemented without archive code. Supply redacted equity BUY, SELL,
+   expiry-omitted non-index stock-option, and additional malformed-message
+   examples before expanding those forms.
 2. **Equity quote policy:** supply the maximum accepted age for Yahoo's market
    timestamp, the maximum local response age, and the percentage above market.
    Yahoo officially describes this data as informational and lists BSE as delayed
@@ -118,9 +124,6 @@ answer. Code must not turn an open decision into an implicit default.
     encryption, recovery target, and restore-drill schedule before VM setup.
 16. **Names and display:** confirm whether “Sapphire Bot” from the screenshot is
     the product name or only a visual reference.
-17. **Rejected duplicate candidates:** decide whether an option candidate that
-    fails instrument, price, funds, or another deterministic gate reserves the
-    20-second duplicate window. No processing orchestration will infer this.
 
 ## Supplied dashboard references
 

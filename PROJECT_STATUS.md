@@ -24,6 +24,10 @@ Status date: 2026-10-27 (Asia/Kolkata)
   forms. It preserves price bounds, month, strike, and CE/PE; ignores Telegram
   SL/target prose; and fails closed for the supplied analysis, watchlist,
   future-intent, status/log, negated-BUY, and chart-only examples.
+- TEST-safe processing composition for durable receipt, parsing, deterministic
+  checking, append-only audit, and atomic option deduplication. Rejected source,
+  freshness, index, listing, price, identity, and ambiguity cases create no
+  duplicate claim; a later corrected candidate can claim immediately.
 - Structured reason codes and explicit remaining-gate list.
 - Structural safety boundary: the package contains no broker client, order model,
   fill model, holdings model, or simulator; `trade_ready` is always false.
@@ -41,9 +45,10 @@ Status date: 2026-10-27 (Asia/Kolkata)
 
 ## Planned, blocked by inputs or approval
 
-- Equity BUY, SELL, PE, expiry-omitted stock-option, and malformed parser examples.
-- Composition of receipt, parsing, instrument resolution, checking, audit, and
-  duplicate claiming after the rejected-candidate window policy is supplied.
+- Equity BUY, SELL, expiry-omitted non-index stock-option, and additional
+  malformed parser examples.
+- Read-only instrument-resolver adapter feeding canonical facts into the
+  implemented processor.
 - Telegram listener/session handling and authenticated operator feedback.
 - Read-only Dhan instrument, funds, margin, order, trade, and position
   connectivity.
