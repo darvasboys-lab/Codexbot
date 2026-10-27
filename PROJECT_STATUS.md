@@ -20,6 +20,10 @@ Status date: 2026-10-27 (Asia/Kolkata)
   CLI commands.
 - Read-only Yahoo Finance NSE/BSE equity quote adapter with market and receipt
   timestamps, strict response validation, and caller-supplied freshness limits.
+- Conservative Telegram parser for the supplied compact option BUY and two EXIT
+  forms. It preserves price bounds, month, strike, and CE/PE; ignores Telegram
+  SL/target prose; and fails closed for the supplied analysis, watchlist,
+  future-intent, status/log, negated-BUY, and chart-only examples.
 - Structured reason codes and explicit remaining-gate list.
 - Structural safety boundary: the package contains no broker client, order model,
   fill model, holdings model, or simulator; `trade_ready` is always false.
@@ -37,7 +41,9 @@ Status date: 2026-10-27 (Asia/Kolkata)
 
 ## Planned, blocked by inputs or approval
 
-- Approval of candidate reference formats and the real-message parser.
+- Equity BUY, SELL, PE, expiry-omitted stock-option, and malformed parser examples.
+- Composition of receipt, parsing, instrument resolution, checking, audit, and
+  duplicate claiming after the rejected-candidate window policy is supplied.
 - Telegram listener/session handling and authenticated operator feedback.
 - Read-only Dhan instrument, funds, margin, order, trade, and position
   connectivity.

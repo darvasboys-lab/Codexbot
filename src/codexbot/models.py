@@ -115,11 +115,7 @@ class CheckerPolicy:
 
 @dataclass(frozen=True, slots=True)
 class NormalizedSignal:
-    """A parsed Telegram message supplied to the checking core.
-
-    Parsing is intentionally outside the first slice because real examples and the
-    reference archive have not yet been reviewed.
-    """
+    """A parsed Telegram message combined with trusted envelope metadata."""
 
     source_group_id: int
     source_sender_or_channel_id: int | None

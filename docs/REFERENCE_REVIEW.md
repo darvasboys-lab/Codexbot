@@ -40,7 +40,7 @@ Equity examples:
 - `Bought Manipal Payment at 450`
 - `Buy State Bank of India @ 810`
 
-Stock-option examples:
+Stock-option examples originally found in the archive:
 
 - `#POLYCAB 8000 PE OCT @90-105`
 - `#LT 3900PE @80`
@@ -51,6 +51,12 @@ Exit examples include `Book profits ...` and `Exit ...`. These samples appear in
 tests or documentation and are not assumed to be real production messages. Udit
 must confirm which formats and misspellings actually occur before a parser is
 implemented.
+
+On 2026-10-27, Udit supplied `CDSL 1400CE OCT @33-35`,
+`SENSEX 74500CE @450-460`, two EXIT messages, and several non-actionable examples.
+Codexbot now implements those exact structural forms from the supplied text. No
+archive parser code was copied. Other archive examples remain candidates rather
+than approved parser behavior.
 
 ## Rules deliberately not reused
 

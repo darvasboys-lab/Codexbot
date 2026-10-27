@@ -24,14 +24,19 @@ separately approved live test.
   two-writer claim race.
 - Verify Yahoo NSE/BSE symbol construction, timestamps, caller-defined quote age,
   and fail-closed malformed-response handling with an injected local transport.
+- Verify the supplied CDSL option range uses 35 as its upper bound; Telegram
+  SL/target prose cannot modify it; SENSEX parses as an option candidate and is
+  rejected only by verified index facts; supplied EXIT forms remain non-BUY; and
+  analysis, watchlist, future intent, status/log, negated BUY, invalid ranges,
+  and captionless media all fail closed.
 
-Current result: 57 tests pass. Ruff and strict mypy pass.
+Current result: 72 tests pass. Ruff and strict mypy pass.
 
-## 2. Parser and reference-rule tests
+## 2. Remaining parser and reference-rule tests
 
-The reference archive has been reviewed, but parsing remains blocked until Udit
-approves its candidate formats and supplies redacted real messages. For each
-approved format, keep exact positive and negative examples. Confirm edits/deletions
+The supplied option, EXIT, and non-actionable examples are implemented as exact
+fixtures. Equity BUY, SELL, PE, expiry-omitted stock-option, and malformed
+examples remain needed before those forms are expanded. Confirm edits/deletions
 do not reprocess a completed message. Fuzz malformed text and prove it cannot
 silently become a BUY.
 

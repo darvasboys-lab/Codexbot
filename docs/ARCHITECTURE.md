@@ -33,8 +33,10 @@ later adds a gate; this list is never evidence that order submission is authoriz
 - **Telegram adapter:** receives message events, reconnects safely, protects
   session state, provides trusted source metadata, and applies the approved
   restart/backlog policy once Udit chooses it.
-- **Parser:** turns approved message formats into normalized signals. It will be
-  implemented after archive review and real examples.
+- **Parser:** conservatively recognizes the supplied compact stock-option BUY and
+  two EXIT forms. It preserves the option request and price bounds while treating
+  supplied advisory, negated, status/log, and no-caption media examples as
+  non-actionable. It does not decide listing or index identity.
 - **Rule engine:** deterministic checks with versioned reason codes. AI cannot
   override it.
 - **Dhan read model:** instruments, funds/margins, orders, trades, and positions

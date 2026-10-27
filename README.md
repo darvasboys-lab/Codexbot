@@ -2,8 +2,9 @@
 
 Codexbot is a new single-operator Telegram-to-Dhan trading bot for Udit. The
 repository contains a deterministic signal checker, a SQLite audit/deduplication
-journal, and a read-only Yahoo Finance equity quote adapter. It cannot place
-broker orders, create fills, or simulate holdings.
+journal, a conservative Telegram text parser, and a read-only Yahoo Finance
+equity quote adapter. It cannot place broker orders, create fills, or simulate
+holdings.
 
 ## Current behavior
 
@@ -20,6 +21,14 @@ The checker accepts an already-normalized signal and applies only agreed rules:
 - indexes, unapproved stock futures, unresolved instruments, and unlisted
   instruments are rejected;
 - a stock option requires a stated price and one unique listed contract.
+
+The parser recognizes the supplied stock-option form
+`SYMBOL STRIKE CE/PE [MONTH] @ LOW[-HIGH]`, using the upper value as the entry
+bound. It recognizes the supplied prefix and infix EXIT forms. Analysis,
+watchlist-only text, future-entry discussion, bot status messages, negated BUY
+instructions, unsupported text, and chart-only messages without a caption fail
+closed as non-actionable. Telegram SL, target, holding-period, and sizing prose do
+not alter parsed entry fields.
 
 The SQLite journal uses WAL mode and immutable first receipts. Its atomic
 20-second stock-option claim uses canonical underlying ID + `BUY` + stock-option

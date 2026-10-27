@@ -18,6 +18,19 @@ answer. Code must not turn an open decision into an implicit default.
   live in one protected environment file; restart-to-apply is acceptable.
 - Process only `BUY` initially. Classify and log `SELL`/`EXIT` without execution.
   Ignore edits/deletions after processing.
+- Recognize the supplied compact stock-option form
+  `SYMBOL STRIKE CE/PE [MONTH] @ LOW[-HIGH]` as a BUY candidate. Preserve both
+  bounds and use the upper value as the stated entry bound for later pricing.
+  Telegram SL, target, holding-period, and quantity commentary do not change the
+  entry fields.
+- Recognize the supplied `Close SYMBOL STRIKE CE/PE at PRICE` and
+  `SYMBOL exit at PRICE` forms as EXIT. They are classified and logged but never
+  enter the BUY pipeline.
+- Treat analysis, watchlist-only text, future-entry discussion, bot status/log
+  messages, negated BUY instructions, unsupported text, and images without an
+  actionable text caption as non-actionable. A compact option-shaped index
+  message may be parsed, but canonical instrument facts must reject it as an
+  index; symbol-name guessing is not authoritative.
 - Require both a configured group ID and an authorized sender/channel ID.
   Forwarded messages also require an explicitly authorized original-source ID;
   hidden or unauthorized origins are rejected.
@@ -63,10 +76,11 @@ answer. Code must not turn an open decision into an implicit default.
 
 ## Open decisions — implementation blocked where affected
 
-1. **Reference rules and examples:** `darvas_script-main.zip` has been reviewed;
-   no code was copied. Confirm the candidate formats in
-   `docs/REFERENCE_REVIEW.md` and provide real, redacted messages before parsing
-   rules are implemented.
+1. **Remaining parser examples:** stock-option, EXIT, analysis, watchlist,
+   future-intent, status/log, negated-BUY, and chart-only examples were supplied
+   and implemented without archive code. Supply redacted equity BUY, SELL, PE,
+   expiry-omitted stock-option, and malformed-message examples before expanding
+   those forms.
 2. **Equity quote policy:** supply the maximum accepted age for Yahoo's market
    timestamp, the maximum local response age, and the percentage above market.
    Yahoo officially describes this data as informational and lists BSE as delayed
@@ -104,6 +118,9 @@ answer. Code must not turn an open decision into an implicit default.
     encryption, recovery target, and restore-drill schedule before VM setup.
 16. **Names and display:** confirm whether “Sapphire Bot” from the screenshot is
     the product name or only a visual reference.
+17. **Rejected duplicate candidates:** decide whether an option candidate that
+    fails instrument, price, funds, or another deterministic gate reserves the
+    20-second duplicate window. No processing orchestration will infer this.
 
 ## Supplied dashboard references
 
