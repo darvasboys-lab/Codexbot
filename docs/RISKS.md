@@ -7,13 +7,13 @@ Status date: 2026-10-27 (Asia/Kolkata)
 | LIVE use may not meet post-April-2026 retail-algo rules | Obtain current written Dhan classification/onboarding guidance; confirm hosting, static IP, algo tagging, audit, and rate limits before implementing writes | LIVE blocker |
 | Duplicate order after timeout or ambiguous response | Durable unique intent/correlation record; reconcile broker orders and trades; never blind-retry | Design approved; not implemented |
 | Over-exit after partial fills or restart | Derive exits from reconciled broker net quantity; serialize exit changes; enforce one-retry policy only after confirmed cancellation | Not implemented |
-| Stale, delayed, or unlicensed quote | Yahoo is informational-only and BSE is delayed 15 minutes; use a documented Dhan source for LIVE, VM clock health, market-session/calendar gate, and user-approved age limits | Policy open |
+| Stale, delayed, or informational quote | Yahoo is the approved source for now and reports BSE delayed by 15 minutes; retain market/receipt timestamps, fail closed, require VM clock health, session/calendar checks, and explicit age limits | Adapter implemented; limits open |
 | Wrong stock/contract | Resolve canonical security ID, exchange, segment, expiry, strike/type, lot, and tick from current instrument data; reject ambiguity | Core boundary implemented; adapter pending |
-| Duplicate Telegram events across groups/reconnects | Durable receipt identity plus atomic approved duplicate key/window | Key/clock policy open |
+| Duplicate Telegram events across groups/reconnects | Immutable first receipt plus atomic 20-second canonical-underlying option claim; ignore strike/expiry/price/CE-PE | Implemented for stock options |
 | Backlog traded after reconnect | Fail closed; no old-message auto-trading; exact still-fresh backlog policy remains open | Policy open |
 | Token/TOTP or Telegram session exposure | Files outside Git with restrictive permissions; redact logs/errors/URLs; manual recovery; no secrets in images or command history | Git exclusions implemented; runtime pending |
 | Unexpected mode transition | Reconcile first; recheck durable common mode at submission boundary; manage filled exposure under an approved policy | Policy open |
 | AI hallucination, latency, or data disclosure | Advisory-only review, deterministic revalidation, bounded timeout/cost, audit, and approved provider/data policy | Policy open |
-| VM/SQLite loss or corruption | WAL, short transactions, integrity checks, encrypted backups, restore drills, disk alerts | Persistence decision open |
+| VM/SQLite loss or corruption | WAL, short transactions, integrity/backup/restore commands, encrypted scheduled backups, restore drills, disk alerts | Core tooling implemented; VM operations open |
 | Emergency stop gives false safety | Check durable stop immediately before entry; cancel/reconcile pending entries; separately authenticate close action | Not implemented |
 | Broker/API behavior changes | Pin tested client behavior, monitor official release notes, contract-test read APIs, reverify before LIVE | Ongoing |

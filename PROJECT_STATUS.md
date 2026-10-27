@@ -8,9 +8,18 @@ Status date: 2026-10-27 (Asia/Kolkata)
 - Typed, deterministic, side-effect-free signal-checking core.
 - Common execution-mode model with safe `TEST` default and separate equity/F&O
   active flags.
-- Configured-source, source-verification, 60-second age, action, segment,
+- Strict group plus sender/channel authentication, forwarded-origin checks,
+  first-durable-receipt freshness with 2-second future skew, action, segment,
   instrument resolution/listing, verified instrument-kind, index, futures, and
   basic stock-option gates.
+- SQLite journal in WAL mode with durable idempotent signal receipts, append-only
+  audit/receipt/deduplication tables, and atomic 20-second stock-option claims.
+- Aggressive stock-option duplicate identity based on canonical underlying only;
+  strike, expiry, price, and CE/PE do not distinguish signals in the window.
+- Database integrity, consistent backup, and temporary restore-test functions and
+  CLI commands.
+- Read-only Yahoo Finance NSE/BSE equity quote adapter with market and receipt
+  timestamps, strict response validation, and caller-supplied freshness limits.
 - Structured reason codes and explicit remaining-gate list.
 - Structural safety boundary: the package contains no broker client, order model,
   fill model, holdings model, or simulator; `trade_ready` is always false.
@@ -29,11 +38,10 @@ Status date: 2026-10-27 (Asia/Kolkata)
 ## Planned, blocked by inputs or approval
 
 - Approval of candidate reference formats and the real-message parser.
-- Exact duplicate detection.
 - Telegram listener/session handling and authenticated operator feedback.
-- Read-only Dhan instrument, quote, funds, margin, order, trade, and position
+- Read-only Dhan instrument, funds, margin, order, trade, and position
   connectivity.
-- Durable journal and restart reconciliation.
+- Journal orchestration, retention/backup scheduling, and restart reconciliation.
 - Pricing, sizing, funds, risk, emergency-stop, execution, partial-fill/retry, and
   protection logic.
 - 08:00 Asia/Kolkata health/token workflow and exchange calendar.
@@ -45,6 +53,9 @@ Status date: 2026-10-27 (Asia/Kolkata)
 - `darvas_script-main.zip` was reviewed by SHA-256; no source file or unapproved
   rule was reused.
 - No Dhan or Telegram credential has been requested, stored, or tested.
+- Yahoo integration is covered by injected-response unit tests. A read-only
+  `RELIANCE.NS` request returned a timestamped INR response on 2026-10-27; it was
+  a connectivity smoke check, not trading evidence. Quote-age limits remain unset.
 - Official BSE calendar and exchange-specific algo materials have not yet been
   verified; BSE remains blocked beyond offline core work.
 - No broker connectivity, VM deployment, order submission, or production

@@ -1,17 +1,18 @@
 # Codexbot
 
 Codexbot is a new single-operator Telegram-to-Dhan trading bot for Udit. The
-repository currently contains the first safe build slice: a deterministic,
-side-effect-free signal checker. It cannot place broker orders, create fills, or
-simulate holdings.
+repository contains a deterministic signal checker, a SQLite audit/deduplication
+journal, and a read-only Yahoo Finance equity quote adapter. It cannot place
+broker orders, create fills, or simulate holdings.
 
 ## Current behavior
 
 The checker accepts an already-normalized signal and applies only agreed rules:
 
-- only configured Telegram groups and verified source identities continue;
-- message age is at most 60 seconds, inclusive, with future-clock tolerance
-  required explicitly by policy;
+- both the configured Telegram group ID and authorized sender/channel ID must
+  match; forwarded messages also require an authorized original source ID;
+- message age is measured at the first durable receipt, is at most 60 seconds
+  inclusive, and allows exactly 2 seconds of future clock skew;
 - `BUY` is the only executable action under consideration;
 - `SELL` and `EXIT` are classified and filtered;
 - equity and F&O activation are independent, while one `TEST`/`LIVE` mode is
@@ -20,9 +21,17 @@ The checker accepts an already-normalized signal and applies only agreed rules:
   instruments are rejected;
 - a stock option requires a stated price and one unique listed contract.
 
+The SQLite journal uses WAL mode and immutable first receipts. Its atomic
+20-second stock-option claim uses canonical underlying ID + `BUY` + stock-option
+family, deliberately ignoring strike, expiry, price, and CE/PE. Audit, receipt,
+claim, and decision rows are append-only. The Yahoo adapter retrieves timestamped
+NSE (`.NS`) and BSE (`.BO`) equity quotes and requires the caller to supply the
+still-open maximum acceptable quote age.
+
 Passing these checks produces `PASSED_CORE`, never “valid order” or “trade
-ready.” Quote, duplicate, price, tick-size, sizing, funds, risk, mode, emergency
-stop, and broker-reconciliation gates remain mandatory and are not implemented.
+ready.” Applying the Yahoo quote to an entry, equity price percentage, sizing,
+funds, risk, mode, emergency stop, and broker-reconciliation gates remain
+mandatory and are not implemented.
 
 ## Development
 
@@ -33,6 +42,14 @@ uv sync --frozen --extra dev
 uv run --frozen ruff check .
 uv run --frozen mypy
 uv run --frozen pytest
+```
+
+SQLite maintenance commands operate on runtime files outside Git:
+
+```bash
+uv run --frozen codexbot-db integrity --database data/codexbot.sqlite3
+uv run --frozen codexbot-db backup --database data/codexbot.sqlite3 --output /backup/codexbot.sqlite3
+uv run --frozen codexbot-db restore-test --backup /backup/codexbot.sqlite3
 ```
 
 The CI workflow runs the same lint, type, and test checks. No credential is

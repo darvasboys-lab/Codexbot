@@ -100,10 +100,10 @@ and exchange metadata, but endpoint availability and schema are not guaranteed.
 
 Yahoo's official market-coverage page states that all Yahoo Finance data is for
 informational purposes and is not intended for trading or investing. It currently
-lists NSE (`.NS`) as real-time and BSE (`.BO`) as delayed by 15 minutes. Therefore
-Yahoo Finance cannot be the authoritative source for LIVE entry pricing in this
-project. It could be an optional TEST/dashboard comparison, clearly labeled, if
-Udit approves; LIVE validation should use a documented broker/exchange-authorized
-source.
+lists NSE (`.NS`) as real-time and BSE (`.BO`) as delayed by 15 minutes. Udit
+subsequently approved Yahoo Finance as the equity market-data source for the
+current phase and asked that no other market-data API be pursued now. The new
+adapter validates price and timestamps and never copies the archive fallback.
+Maximum age limits and all other pre-LIVE gates remain unresolved.
 
 Official source: [Yahoo Finance exchanges and data providers](https://help.yahoo.com/kb/finance-for-web/exchanges-data-providers-yahoo-finance-sln2310.html)

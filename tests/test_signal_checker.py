@@ -38,13 +38,12 @@ def policy(
     equity_active: bool = True,
     fno_active: bool = True,
     mode: ExecutionMode = ExecutionMode.TEST,
-    future_clock_tolerance: timedelta = timedelta(0),
 ) -> CheckerPolicy:
     return CheckerPolicy(
         allowed_group_ids=frozenset({1001, 1002}),
+        authorized_source_ids=frozenset({2001, 2002}),
         equity_active=equity_active,
         fno_active=fno_active,
-        future_clock_tolerance=future_clock_tolerance,
         execution_mode=mode,
     )
 
@@ -55,15 +54,21 @@ def signal(
     segment: Segment = Segment.EQUITY,
     group_id: int = 1001,
     sent_at: datetime = NOW,
-    identity_verified: bool = True,
+    durable_received_at: datetime = NOW,
+    source_id: int | None = 2001,
+    is_forwarded: bool = False,
+    forwarded_from_source_id: int | None = None,
     symbol: str | None = "RELIANCE",
     price: Decimal | None = None,
 ) -> NormalizedSignal:
     return NormalizedSignal(
         source_group_id=group_id,
+        source_sender_or_channel_id=source_id,
         telegram_message_id=42,
         sent_at=sent_at,
-        source_identity_verified=identity_verified,
+        first_durable_received_at=durable_received_at,
+        is_forwarded=is_forwarded,
+        forwarded_from_source_id=forwarded_from_source_id,
         action=action,
         segment=segment,
         symbol=symbol,
@@ -72,7 +77,7 @@ def signal(
 
 
 def test_default_mode_is_test_and_core_pass_is_never_trade_ready() -> None:
-    report = SignalChecker(policy()).check(signal(), LISTED_EQUITY, evaluated_at=NOW)
+    report = SignalChecker(policy()).check(signal(), LISTED_EQUITY)
 
     assert report.disposition is CheckDisposition.PASSED_CORE
     assert report.execution_mode is ExecutionMode.TEST
@@ -81,9 +86,7 @@ def test_default_mode_is_test_and_core_pass_is_never_trade_ready() -> None:
 
 
 def test_live_mode_still_cannot_make_the_core_trade_ready() -> None:
-    report = SignalChecker(policy(mode=ExecutionMode.LIVE)).check(
-        signal(), LISTED_EQUITY, evaluated_at=NOW
-    )
+    report = SignalChecker(policy(mode=ExecutionMode.LIVE)).check(signal(), LISTED_EQUITY)
 
     assert report.disposition is CheckDisposition.PASSED_CORE
     assert report.execution_mode is ExecutionMode.LIVE
@@ -94,7 +97,7 @@ def test_live_mode_still_cannot_make_the_core_trade_ready() -> None:
 def test_message_age_boundary_is_inclusive(age_seconds: int) -> None:
     candidate = signal(sent_at=NOW - timedelta(seconds=age_seconds))
 
-    report = SignalChecker(policy()).check(candidate, LISTED_EQUITY, evaluated_at=NOW)
+    report = SignalChecker(policy()).check(candidate, LISTED_EQUITY)
 
     assert ReasonCode.MESSAGE_TOO_OLD not in report.reasons
 
@@ -102,38 +105,35 @@ def test_message_age_boundary_is_inclusive(age_seconds: int) -> None:
 def test_message_older_than_sixty_seconds_is_rejected() -> None:
     candidate = signal(sent_at=NOW - timedelta(seconds=60, microseconds=1))
 
-    report = SignalChecker(policy()).check(candidate, LISTED_EQUITY, evaluated_at=NOW)
+    report = SignalChecker(policy()).check(candidate, LISTED_EQUITY)
 
     assert report.disposition is CheckDisposition.REJECTED
     assert ReasonCode.MESSAGE_TOO_OLD in report.reasons
 
 
 @pytest.mark.parametrize(
-    ("sent_at", "evaluated_at"),
+    ("sent_at", "durable_received_at"),
     [
         (datetime(2026, 10, 27, 4, 0), NOW),
         (NOW, datetime(2026, 10, 27, 4, 0)),
-        (NOW + timedelta(microseconds=1), NOW),
+        (NOW + timedelta(seconds=2, microseconds=1), NOW),
     ],
 )
 def test_invalid_or_future_timestamp_is_rejected(
-    sent_at: datetime, evaluated_at: datetime
+    sent_at: datetime, durable_received_at: datetime
 ) -> None:
     report = SignalChecker(policy()).check(
-        signal(sent_at=sent_at), LISTED_EQUITY, evaluated_at=evaluated_at
+        signal(sent_at=sent_at, durable_received_at=durable_received_at), LISTED_EQUITY
     )
 
     assert ReasonCode.INVALID_TIMESTAMP in report.reasons
     assert report.disposition is CheckDisposition.REJECTED
 
 
-def test_future_clock_tolerance_must_be_explicit() -> None:
+def test_two_second_future_clock_tolerance_is_fixed() -> None:
     candidate = signal(sent_at=NOW + timedelta(seconds=2))
-    tolerant_policy = policy(future_clock_tolerance=timedelta(seconds=2))
 
-    report = SignalChecker(tolerant_policy).check(
-        candidate, LISTED_EQUITY, evaluated_at=NOW
-    )
+    report = SignalChecker(policy()).check(candidate, LISTED_EQUITY)
 
     assert ReasonCode.INVALID_TIMESTAMP not in report.reasons
 
@@ -144,7 +144,6 @@ def test_sell_and_exit_are_classified_but_filtered(action: Action) -> None:
     report = SignalChecker(inactive_policy).check(
         signal(action=action, segment=Segment.FNO, symbol=None),
         None,
-        evaluated_at=NOW,
     )
 
     assert report.disposition is CheckDisposition.FILTERED
@@ -157,21 +156,52 @@ def test_unknown_message_is_filtered() -> None:
     report = SignalChecker(inactive_policy).check(
         signal(action=Action.UNKNOWN, segment=Segment.FNO, symbol=None),
         None,
-        evaluated_at=NOW,
     )
 
     assert report.disposition is CheckDisposition.FILTERED
     assert report.reasons == (ReasonCode.UNRECOGNIZED_MESSAGE,)
 
 
-def test_unconfigured_or_unverified_source_is_rejected() -> None:
-    candidate = signal(group_id=9999, identity_verified=False)
+@pytest.mark.parametrize(
+    ("group_id", "source_id", "reason"),
+    [
+        (9999, 2001, ReasonCode.SOURCE_NOT_CONFIGURED),
+        (1001, 9998, ReasonCode.SOURCE_IDENTITY_UNAUTHORIZED),
+        (1001, None, ReasonCode.SOURCE_IDENTITY_UNAUTHORIZED),
+    ],
+)
+def test_both_group_and_source_identity_are_required(
+    group_id: int, source_id: int | None, reason: ReasonCode
+) -> None:
+    candidate = signal(group_id=group_id, source_id=source_id)
 
-    report = SignalChecker(policy()).check(candidate, LISTED_EQUITY, evaluated_at=NOW)
+    report = SignalChecker(policy()).check(candidate, LISTED_EQUITY)
 
     assert report.disposition is CheckDisposition.REJECTED
-    assert ReasonCode.SOURCE_NOT_CONFIGURED in report.reasons
-    assert ReasonCode.SOURCE_IDENTITY_UNVERIFIED in report.reasons
+    assert reason in report.reasons
+
+
+@pytest.mark.parametrize("forwarded_from_source_id", [None, 9998])
+def test_forwarded_signal_requires_authorized_origin(
+    forwarded_from_source_id: int | None,
+) -> None:
+    candidate = signal(
+        is_forwarded=True,
+        forwarded_from_source_id=forwarded_from_source_id,
+    )
+
+    report = SignalChecker(policy()).check(candidate, LISTED_EQUITY)
+
+    assert report.disposition is CheckDisposition.REJECTED
+    assert ReasonCode.FORWARDED_SOURCE_UNAUTHORIZED in report.reasons
+
+
+def test_forwarded_signal_with_authorized_sender_and_origin_can_continue() -> None:
+    candidate = signal(is_forwarded=True, forwarded_from_source_id=2002)
+
+    report = SignalChecker(policy()).check(candidate, LISTED_EQUITY)
+
+    assert report.disposition is CheckDisposition.PASSED_CORE
 
 
 @pytest.mark.parametrize(
@@ -191,7 +221,7 @@ def test_inactive_segment_is_rejected(
     candidate: NormalizedSignal, configured_policy: CheckerPolicy
 ) -> None:
     facts = LISTED_OPTION if candidate.segment is Segment.FNO else LISTED_EQUITY
-    report = SignalChecker(configured_policy).check(candidate, facts, evaluated_at=NOW)
+    report = SignalChecker(configured_policy).check(candidate, facts)
 
     assert report.disposition is CheckDisposition.REJECTED
     assert ReasonCode.SEGMENT_INACTIVE in report.reasons
@@ -214,9 +244,7 @@ def test_indexes_and_unapproved_futures_are_rejected(
         security_id="verified-id",
         unique_contract=True,
     )
-    report = SignalChecker(policy()).check(
-        signal(segment=Segment.FNO), facts, evaluated_at=NOW
-    )
+    report = SignalChecker(policy()).check(signal(segment=Segment.FNO), facts)
 
     assert report.disposition is CheckDisposition.REJECTED
     assert reason in report.reasons
@@ -250,14 +278,14 @@ def test_indexes_and_unapproved_futures_are_rejected(
 def test_unresolved_or_unlisted_instrument_is_rejected(
     facts: InstrumentFacts, reason: ReasonCode
 ) -> None:
-    report = SignalChecker(policy()).check(signal(), facts, evaluated_at=NOW)
+    report = SignalChecker(policy()).check(signal(), facts)
 
     assert report.disposition is CheckDisposition.REJECTED
     assert reason in report.reasons
 
 
 def test_buy_without_instrument_facts_is_rejected() -> None:
-    report = SignalChecker(policy()).check(signal(), None, evaluated_at=NOW)
+    report = SignalChecker(policy()).check(signal(), None)
 
     assert report.disposition is CheckDisposition.REJECTED
     assert ReasonCode.INSTRUMENT_UNRESOLVED in report.reasons
@@ -267,7 +295,6 @@ def test_verified_instrument_kind_must_match_signal_segment() -> None:
     report = SignalChecker(policy()).check(
         signal(segment=Segment.FNO, price=Decimal("100")),
         LISTED_EQUITY,
-        evaluated_at=NOW,
     )
 
     assert report.disposition is CheckDisposition.REJECTED
@@ -283,7 +310,7 @@ def test_unknown_verified_instrument_kind_is_rejected() -> None:
         unique_contract=True,
     )
 
-    report = SignalChecker(policy()).check(signal(), unsupported, evaluated_at=NOW)
+    report = SignalChecker(policy()).check(signal(), unsupported)
 
     assert report.disposition is CheckDisposition.REJECTED
     assert ReasonCode.INSTRUMENT_KIND_UNSUPPORTED in report.reasons
@@ -291,9 +318,7 @@ def test_unknown_verified_instrument_kind_is_rejected() -> None:
 
 @pytest.mark.parametrize("symbol", [None, "", "   "])
 def test_missing_instrument_reference_is_rejected(symbol: str | None) -> None:
-    report = SignalChecker(policy()).check(
-        signal(symbol=symbol), LISTED_EQUITY, evaluated_at=NOW
-    )
+    report = SignalChecker(policy()).check(signal(symbol=symbol), LISTED_EQUITY)
 
     assert report.disposition is CheckDisposition.REJECTED
     assert ReasonCode.INSTRUMENT_REFERENCE_MISSING in report.reasons
@@ -308,7 +333,7 @@ def test_resolved_instrument_requires_canonical_security_id() -> None:
         unique_contract=True,
     )
 
-    report = SignalChecker(policy()).check(signal(), incomplete, evaluated_at=NOW)
+    report = SignalChecker(policy()).check(signal(), incomplete)
 
     assert report.disposition is CheckDisposition.REJECTED
     assert ReasonCode.INSTRUMENT_IDENTITY_INCOMPLETE in report.reasons
@@ -324,7 +349,7 @@ def test_stock_option_requires_price_and_unique_contract() -> None:
         unique_contract=False,
     )
 
-    report = SignalChecker(policy()).check(candidate, ambiguous, evaluated_at=NOW)
+    report = SignalChecker(policy()).check(candidate, ambiguous)
 
     assert report.disposition is CheckDisposition.REJECTED
     assert ReasonCode.OPTION_PRICE_REQUIRED in report.reasons
@@ -339,7 +364,6 @@ def test_stock_option_price_must_be_positive(price: Decimal) -> None:
     report = SignalChecker(policy()).check(
         signal(segment=Segment.FNO, price=price),
         LISTED_OPTION,
-        evaluated_at=NOW,
     )
 
     assert report.disposition is CheckDisposition.REJECTED
@@ -352,17 +376,26 @@ def test_stock_option_can_pass_only_the_implemented_core_checks() -> None:
         price=Decimal("100.00"),
     )
 
-    report = SignalChecker(policy()).check(candidate, LISTED_OPTION, evaluated_at=NOW)
+    report = SignalChecker(policy()).check(candidate, LISTED_OPTION)
 
     assert report.disposition is CheckDisposition.PASSED_CORE
     assert report.trade_ready is False
 
 
-def test_negative_future_clock_tolerance_is_invalid() -> None:
-    with pytest.raises(ValueError, match="future_clock_tolerance cannot be negative"):
+@pytest.mark.parametrize(
+    ("groups", "sources", "message"),
+    [
+        (frozenset(), frozenset({2001}), "allowed group"),
+        (frozenset({1001}), frozenset(), "authorized source"),
+    ],
+)
+def test_source_policy_sets_cannot_be_empty(
+    groups: frozenset[int], sources: frozenset[int], message: str
+) -> None:
+    with pytest.raises(ValueError, match=message):
         CheckerPolicy(
-            allowed_group_ids=frozenset({1001}),
+            allowed_group_ids=groups,
+            authorized_source_ids=sources,
             equity_active=True,
             fno_active=True,
-            future_clock_tolerance=timedelta(microseconds=-1),
         )

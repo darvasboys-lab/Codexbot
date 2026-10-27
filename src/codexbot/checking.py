@@ -19,6 +19,7 @@ from codexbot.models import (
 
 _ALL_PENDING_GATES = tuple(PendingGate)
 _MAX_MESSAGE_AGE = timedelta(seconds=60)
+_FUTURE_CLOCK_TOLERANCE = timedelta(seconds=2)
 
 
 class SignalChecker:
@@ -31,21 +32,23 @@ class SignalChecker:
         self,
         signal: NormalizedSignal,
         instrument: InstrumentFacts | None,
-        *,
-        evaluated_at: datetime,
     ) -> CheckReport:
         reasons: list[ReasonCode] = []
 
         if signal.source_group_id not in self._policy.allowed_group_ids:
             reasons.append(ReasonCode.SOURCE_NOT_CONFIGURED)
-        if not signal.source_identity_verified:
-            reasons.append(ReasonCode.SOURCE_IDENTITY_UNVERIFIED)
+        if signal.source_sender_or_channel_id not in self._policy.authorized_source_ids:
+            reasons.append(ReasonCode.SOURCE_IDENTITY_UNAUTHORIZED)
+        if signal.is_forwarded and (
+            signal.forwarded_from_source_id not in self._policy.authorized_source_ids
+        ):
+            reasons.append(ReasonCode.FORWARDED_SOURCE_UNAUTHORIZED)
 
-        if not _is_aware(signal.sent_at) or not _is_aware(evaluated_at):
+        if not _is_aware(signal.sent_at) or not _is_aware(signal.first_durable_received_at):
             reasons.append(ReasonCode.INVALID_TIMESTAMP)
         else:
-            age = evaluated_at.astimezone(UTC) - signal.sent_at.astimezone(UTC)
-            if age < -self._policy.future_clock_tolerance:
+            age = signal.first_durable_received_at.astimezone(UTC) - signal.sent_at.astimezone(UTC)
+            if age < -_FUTURE_CLOCK_TOLERANCE:
                 reasons.append(ReasonCode.INVALID_TIMESTAMP)
             elif age > _MAX_MESSAGE_AGE:
                 reasons.append(ReasonCode.MESSAGE_TOO_OLD)

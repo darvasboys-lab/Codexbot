@@ -49,11 +49,17 @@ Sources:
 - [Dhan Market Quote](https://dhanhq.co/docs/v2/market-quote/)
 - [Dhan live market feed](https://dhanhq.co/docs/v2/live-market-feed/)
 
-Udit requested Yahoo Finance for equity prices. Yahoo's official coverage page
-states its data is informational and not intended for trading; it lists NSE as
-real-time and BSE as delayed by 15 minutes. Yahoo may be considered only as an
-optional TEST/dashboard comparison. It is not accepted as the authoritative LIVE
-entry source. See `docs/REFERENCE_REVIEW.md` for the archive-specific finding.
+Udit approved Yahoo Finance for equity prices for the current phase and requested
+that no other market-data API be pursued now. A read-only adapter retrieves
+`regularMarketPrice` and `regularMarketTime` for NSE `.NS` and BSE `.BO` symbols,
+and records local receipt time. It rejects missing, malformed, non-positive, or
+non-unique results. The adapter has no broker-order capability.
+
+Yahoo's official coverage page states its data is informational and not intended
+for trading; it lists NSE as real-time and BSE as delayed by 15 minutes. Maximum
+Yahoo market age and local response age remain required configuration decisions
+before the price gate can pass. This known limitation remains part of the
+pre-LIVE evidence review; it does not trigger work on another API now.
 
 ## Instruments, tick sizes, lots, and MTF
 

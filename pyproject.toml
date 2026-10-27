@@ -11,6 +11,9 @@ requires-python = ">=3.12"
 authors = [{ name = "Udit" }]
 dependencies = []
 
+[project.scripts]
+codexbot-db = "codexbot.db_maintenance:main"
+
 [project.optional-dependencies]
 dev = [
   "mypy>=1.14,<2",

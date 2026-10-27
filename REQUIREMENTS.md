@@ -18,16 +18,29 @@ answer. Code must not turn an open decision into an implicit default.
   live in one protected environment file; restart-to-apply is acceptable.
 - Process only `BUY` initially. Classify and log `SELL`/`EXIT` without execution.
   Ignore edits/deletions after processing.
-- Validate configured source, source identity, message age of no more than 60
-  seconds, instrument identity/listing, and sizing. Reject indexes.
-- Use a 20-second cross-group duplicate window once its exact identity and clock
-  semantics are approved. Re-entry after the window is permitted.
+- Require both a configured group ID and an authorized sender/channel ID.
+  Forwarded messages also require an explicitly authorized original-source ID;
+  hidden or unauthorized origins are rejected.
+- Measure the inclusive 60-second age limit at the first durable receipt and
+  allow exactly 2 seconds of future clock skew.
+- For stock options, use a 20-second cross-group duplicate window anchored to
+  first durable receipt. The atomic key is canonical underlying ID + `BUY` +
+  stock-option family + first durable receipt timestamp. Ignore strike, expiry,
+  price, and CE/PE. A signal exactly 20 seconds after an accepted claim is a
+  duplicate; re-entry after 20 seconds is permitted.
+- Use SQLite in WAL mode on the single VM. Keep signal receipts, duplicate claims
+  and decisions, and audit events append-only. Use atomic transactions for
+  duplicate claims and maintain tested integrity, backup, and restore commands.
 - Deterministic local rules have final authority. AI may recheck potential
   rejections when available, but cannot override deterministic validation or
   change rules without approval.
 - Support NSE/BSE equities. Equity entry uses a validated current price plus a
   setup percentage and a `LIMIT` order. Product is delivery or MTF, selected in
   setup.
+- Use Yahoo Finance for equity market prices for now. The adapter must retain the
+  Yahoo market timestamp and local receipt timestamp and fail closed on missing,
+  malformed, non-positive, or non-unique responses. No other market-data API is
+  requested at this stage.
 - Support stock-option `BUY` only. Require a stated price. The upper entry ceiling
   is that price multiplied by `1.04`; tick handling must never exceed the ceiling.
   Use current calendar month when expiry is omitted and reject unless exactly one
@@ -54,50 +67,42 @@ answer. Code must not turn an open decision into an implicit default.
    no code was copied. Confirm the candidate formats in
    `docs/REFERENCE_REVIEW.md` and provide real, redacted messages before parsing
    rules are implemented.
-2. **Source identity and clock skew:** define whether an allowed group/channel
-   alone is trusted, or whether permitted sender/admin IDs must also match; supply
-   the permitted future timestamp tolerance for the 60-second freshness check;
-   choose whether age is measured at first bot receipt or when processing starts.
-3. **Duplicate identity and clock:** choose the exact key across cash symbols,
-   option strikes and expiries; define whether the 20 seconds starts at Telegram
-   send time, first receipt time, or durable-processing time and how restart races
-   are handled.
-4. **Equity quote:** Udit requested Yahoo Finance on 2026-10-27. Yahoo officially
-   labels its data informational and not intended for trading, with BSE delayed by
-   15 minutes, so it cannot be the authoritative LIVE source. Confirm whether
-   Yahoo should be TEST/dashboard-only and choose a documented Dhan source for
-   LIVE validation. Supply maximum quote ages and the percentage above market.
-5. **Option tick rounding:** approve the exact rule. A safe candidate is to round
+2. **Equity quote policy:** supply the maximum accepted age for Yahoo's market
+   timestamp, the maximum local response age, and the percentage above market.
+   Yahoo officially describes this data as informational and lists BSE as delayed
+   by 15 minutes; these limits must be explicit before quote-based entry validation
+   can pass.
+3. **Option tick rounding:** approve the exact rule. A safe candidate is to round
    down to the nearest valid tick so the price never exceeds `signal × 1.04`.
-6. **Sizing priority:** choose fixed shares/lots versus budget when both are
+4. **Sizing priority:** choose fixed shares/lots versus budget when both are
    configured; decide whether insufficient funds always rejects or may reduce
    quantity; define the role of minimum-trade-funds.
-7. **Equity product:** choose delivery or MTF and define Dhan MTF
+5. **Equity product:** choose delivery or MTF and define Dhan MTF
    eligibility/margin checks after broker support is verified.
-8. **Futures:** confirm whether stock futures are in scope. “OK” is not treated as
+6. **Futures:** confirm whether stock futures are in scope. “OK” is not treated as
    approval. Futures remain blocked.
-9. **Timeouts:** set equity initial timeout, option initial timeout, retry timeout,
+7. **Timeouts:** set equity initial timeout, option initial timeout, retry timeout,
    and retry-price rule.
-10. **Mode changes:** define handling of pending entries, exits, and open
+8. **Mode changes:** define handling of pending entries, exits, and open
     positions when changing `TEST`/`LIVE`.
-11. **End of day:** define each product's pending-order and open-position policy.
-12. **Restart gaps:** decide whether missed Telegram messages are logged only or
+9. **End of day:** define each product's pending-order and open-position policy.
+10. **Restart gaps:** decide whether missed Telegram messages are logged only or
     may be evaluated; old messages must never become automatic trades.
-13. **Calendar and 08:00 health check:** use weekdays or the official exchange
+11. **Calendar and 08:00 health check:** use weekdays or the official exchange
     trading calendar; define late/missed checks, token-refresh failure, service
     failure, and notification retry semantics. Automatic reauthentication is not
     assumed.
-14. **AI review:** choose which filtered chatter/rejections invoke AI, provider,
+12. **AI review:** choose which filtered chatter/rejections invoke AI, provider,
     data policy, cost ceiling, latency deadline, timeout behavior, and authorized
     feedback commands.
-15. **Risk and setup values:** provide the actual risk limits, active segments,
+13. **Risk and setup values:** provide the actual risk limits, active segments,
     group IDs, log destination, optional private broker-ack destination, equity
     percentage, sizing values, and SL/target confirmation.
-16. **Infrastructure:** provide the GCP project, region/zone, VM budget/size,
+14. **Infrastructure:** provide the GCP project, region/zone, VM budget/size,
     backup/retention needs, and logging budget when VM work begins.
-17. **Persistence:** approve SQLite on the single VM or request managed PostgreSQL;
-    see the cost discussion in `docs/ARCHITECTURE.md`.
-18. **Names and display:** confirm whether “Sapphire Bot” from the screenshot is
+15. **Audit operations:** choose production retention, backup schedule/location,
+    encryption, recovery target, and restore-drill schedule before VM setup.
+16. **Names and display:** confirm whether “Sapphire Bot” from the screenshot is
     the product name or only a visual reference.
 
 ## Supplied dashboard references

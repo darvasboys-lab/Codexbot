@@ -8,8 +8,8 @@ Telegram client (one protected session)
   -> parser/classifier
   -> local deterministic validation
   -> optional AI review (advisory only)
-  -> duplicate gate
-  -> read-only instrument and quote validation
+  -> atomic SQLite option duplicate claim
+  -> read-only instrument validation and Yahoo equity quote validation
   -> sizing, funds/margin, and risk gates
   -> TEST report OR LIVE execution gate
   -> Dhan order state reconciliation
@@ -23,10 +23,10 @@ will be a durable gate checked immediately before every new entry. Submission wi
 use a durable intent/correlation record so a timeout triggers reconciliation, not
 blind retry.
 
-The first code slice ends after local deterministic validation. It returns
-`PASSED_CORE` plus all currently known missing gates and can never mark a signal
-trade-ready. Any requirement found later adds a gate; this list is never evidence
-that order submission is authorized.
+The current safe slice ends before pricing an entry, sizing, risk approval, or
+execution. The deterministic checker returns `PASSED_CORE` plus all currently
+known missing gates and can never mark a signal trade-ready. Any requirement found
+later adds a gate; this list is never evidence that order submission is authorized.
 
 ## Component boundaries
 
@@ -37,8 +37,8 @@ that order submission is authorized.
   implemented after archive review and real examples.
 - **Rule engine:** deterministic checks with versioned reason codes. AI cannot
   override it.
-- **Dhan read model:** instruments, quotes, funds/margins, orders, trades, and
-  positions from documented read-only interfaces. The instrument resolver must
+- **Dhan read model:** instruments, funds/margins, orders, trades, and positions
+  from documented read-only interfaces. The instrument resolver must
   prove that the normalized symbol/contract fields bind to the returned canonical
   security ID; this early checker accepts resolver facts but cannot prove that
   binding itself.
@@ -46,14 +46,18 @@ that order submission is authorized.
 - **Execution/reconciliation:** LIVE-only order intents, duplicate-submission
   controls, state reconciliation, bounded partial-fill retry, and protection
   exits. Dhan correlation IDs are not assumed to provide idempotency.
-- **Journal:** append-only facts and decisions used for restart recovery and
-  audit. Secrets and session material are excluded.
+- **Yahoo market data:** read-only NSE/BSE equity quote retrieval. Each accepted
+  response contains a positive price, Yahoo market timestamp, local receipt
+  timestamp, currency, and exchange. Final quote-age limits remain blocked.
+- **Journal:** SQLite WAL database containing immutable first receipts,
+  append-only audit facts, and atomic option deduplication decisions. Secrets and
+  session material are excluded.
 - **Admin CLI:** status, effective settings (redacted), orders, positions, errors,
   service control, emergency stop, and separately confirmed close action over SSH.
 
-## Persistence cost decision
+## Persistence decision
 
-For one process on one VM, SQLite in WAL mode is the recommended starting point.
+For one process on one VM, SQLite in WAL mode is approved and implemented.
 It has no separate service fee, network hop, database credentials, or database
 server to patch. The costs are disciplined backups, one-writer constraints, and
 careful recovery testing. Those limits fit the stated single-account workload if
@@ -64,9 +68,12 @@ credentials, but gives stronger remote availability, concurrent writers, and
 managed point-in-time recovery. Those benefits are useful for multiple services
 or high availability, neither of which is currently requested.
 
-No durable adapter is implemented until Udit approves the choice and backup
-expectations. The domain layer will depend on a journal interface so migration is
-possible without changing trading rules.
+Every connection enables foreign keys, a bounded busy timeout, WAL mode, and
+`synchronous=NORMAL`. First receipt uses `(group ID, Telegram message ID)` as its
+idempotent identity. Duplicate checks run in `BEGIN IMMEDIATE`, so concurrent
+groups cannot both accept the same option key. Database triggers reject updates
+and deletes against receipt, audit, claim, and decision tables. Backup retention,
+encryption, and recovery objectives remain deployment decisions.
 
 ## Failure posture
 
@@ -79,9 +86,15 @@ possible without changing trading rules.
 - Filled exposure continues to be managed during emergency stop, subject to the
   approved mode-change and end-of-day policies.
 
-## Freshness clock boundary
+## Freshness and duplicate clock boundaries
 
-The core accepts an explicit `evaluated_at` timestamp so tests and future adapters
-cannot read an uncontrolled global clock. Production composition remains blocked
-until Udit chooses whether the 60-second age is measured at first bot receipt or
-at processing start, and supplies the permitted future-clock tolerance.
+The journal captures `first_durable_received_at` inside the transaction that first
+persists a Telegram message identity. Redelivery returns the original timestamp.
+The checker compares Telegram `sent_at` with that stored value, accepts age from
+-2 through +60 seconds inclusive, and does not read the wall clock itself.
+
+An accepted stock-option claim blocks the same canonical underlying + `BUY` +
+stock-option-family key for 20 seconds inclusive. Strike, expiry, price, and CE/PE
+are not stored in the key. Only accepted claims start windows, so rejected
+duplicates do not extend a window. `BEGIN IMMEDIATE` serializes the query and
+insert, while an exact key-plus-timestamp unique constraint adds a final guard.

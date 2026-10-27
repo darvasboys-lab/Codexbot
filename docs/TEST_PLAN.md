@@ -8,8 +8,9 @@ separately approved live test.
 
 - Type-check and lint all code.
 - Verify `TEST` default and the single common mode model.
-- Verify configured group, explicit source verification, and the inclusive
-  60-second age boundary with an explicit future-clock tolerance.
+- Verify both configured group and authorized sender/channel IDs, forwarded
+  origin authorization, the inclusive 60-second durable-receipt age boundary,
+  and the fixed 2-second future-clock tolerance.
 - Verify `SELL`, `EXIT`, and chatter cannot pass the BUY pipeline.
 - Verify independent equity/F&O active flags.
 - Verify classification comes from resolved instrument facts; reject unresolved,
@@ -18,7 +19,13 @@ separately approved live test.
 - Verify a passing core report remains `trade_ready = false` and exposes every
   missing gate.
 
-Current result: 33 tests pass. Ruff and strict mypy pass.
+- Verify WAL configuration, immutable first-receipt idempotency, append-only
+  enforcement, exact duplicate boundaries, cross-group behavior, and a concurrent
+  two-writer claim race.
+- Verify Yahoo NSE/BSE symbol construction, timestamps, caller-defined quote age,
+  and fail-closed malformed-response handling with an injected local transport.
+
+Current result: 57 tests pass. Ruff and strict mypy pass.
 
 ## 2. Parser and reference-rule tests
 
@@ -28,14 +35,12 @@ approved format, keep exact positive and negative examples. Confirm edits/deleti
 do not reprocess a completed message. Fuzz malformed text and prove it cannot
 silently become a BUY.
 
-## 3. Durable journal and restart tests
+## 3. Remaining durable journal and restart tests
 
-After the persistence decision:
-
-- verify receipt-before-processing and append-only audit behavior;
-- verify uniqueness and event ordering under concurrent group arrivals;
+- verify event ordering under sustained concurrent group arrivals;
 - restart the process and recover every incomplete state without creating orders;
-- test backup, integrity check, restore, file ownership, and disk-full behavior;
+- test production file ownership, disk-full behavior, scheduled encrypted backup,
+  and recovery timing; offline integrity, backup, and restore tests are implemented;
 - verify logs and database records redact credentials/session data; and
 - verify there are no runtime tables or services for paper orders, fake fills,
   simulated holdings, or a virtual portfolio.

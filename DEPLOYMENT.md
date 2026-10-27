@@ -25,6 +25,11 @@ service account. Telegram session files and durable state will live outside the
 Git checkout with restrictive permissions and backups. No credential or session
 belongs in an image, repository, command history, or log.
 
+The runtime database is SQLite in WAL mode. Offline maintenance is exposed as
+`codexbot-db integrity`, `codexbot-db backup`, and `codexbot-db restore-test`.
+Production scheduling, encrypted backup destination, retention, file ownership,
+disk alerts, and recovery objectives will be set in the VM plan.
+
 ## Inputs needed before VM work
 
 - GCP project and billing context;

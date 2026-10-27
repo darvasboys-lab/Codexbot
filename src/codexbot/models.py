@@ -7,7 +7,7 @@ trades. A report that passes this early core is not trade-ready.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 from decimal import Decimal
 from enum import StrEnum
 
@@ -43,7 +43,8 @@ class CheckDisposition(StrEnum):
     """Outcome of the implemented core gates.
 
     PASSED_CORE never means that a signal is ready for order submission. Later
-    quote, duplicate, sizing, funds, risk, and reconciliation gates are mandatory.
+    quote application, duplicate orchestration, sizing, funds, risk, and
+    reconciliation gates are mandatory.
     """
 
     PASSED_CORE = "PASSED_CORE"
@@ -53,7 +54,8 @@ class CheckDisposition(StrEnum):
 
 class ReasonCode(StrEnum):
     SOURCE_NOT_CONFIGURED = "SOURCE_NOT_CONFIGURED"
-    SOURCE_IDENTITY_UNVERIFIED = "SOURCE_IDENTITY_UNVERIFIED"
+    SOURCE_IDENTITY_UNAUTHORIZED = "SOURCE_IDENTITY_UNAUTHORIZED"
+    FORWARDED_SOURCE_UNAUTHORIZED = "FORWARDED_SOURCE_UNAUTHORIZED"
     INVALID_TIMESTAMP = "INVALID_TIMESTAMP"
     MESSAGE_TOO_OLD = "MESSAGE_TOO_OLD"
     NON_BUY_ACTION = "NON_BUY_ACTION"
@@ -99,14 +101,16 @@ class CheckerPolicy:
     """
 
     allowed_group_ids: frozenset[int]
+    authorized_source_ids: frozenset[int]
     equity_active: bool
     fno_active: bool
-    future_clock_tolerance: timedelta
     execution_mode: ExecutionMode = ExecutionMode.TEST
 
     def __post_init__(self) -> None:
-        if self.future_clock_tolerance < timedelta(0):
-            raise ValueError("future_clock_tolerance cannot be negative")
+        if not self.allowed_group_ids:
+            raise ValueError("at least one allowed group ID is required")
+        if not self.authorized_source_ids:
+            raise ValueError("at least one authorized source ID is required")
 
 
 @dataclass(frozen=True, slots=True)
@@ -118,9 +122,12 @@ class NormalizedSignal:
     """
 
     source_group_id: int
+    source_sender_or_channel_id: int | None
     telegram_message_id: int
     sent_at: datetime
-    source_identity_verified: bool
+    first_durable_received_at: datetime
+    is_forwarded: bool
+    forwarded_from_source_id: int | None
     action: Action
     segment: Segment
     symbol: str | None = None
