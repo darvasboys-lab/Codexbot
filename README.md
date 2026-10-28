@@ -92,10 +92,17 @@ SQLite maintenance commands operate on runtime files outside Git:
 uv run --frozen codexbot-db integrity --database data/codexbot.sqlite3
 uv run --frozen codexbot-db backup --database data/codexbot.sqlite3 --output /backup/codexbot.sqlite3
 uv run --frozen codexbot-db restore-test --backup /backup/codexbot.sqlite3
+uv run --frozen codexbot-db unfinished --database data/codexbot.sqlite3 --limit 50
 uv run --frozen codexbot-instruments --cache-directory data/instruments refresh
 uv run --frozen codexbot-instruments --cache-directory data/instruments status --maximum-age-hours HOURS
 uv run --frozen codexbot-instruments --cache-directory data/instruments prune --keep 2
 ```
+
+The `unfinished` command is a **read-only restart diagnostic**: it lists durable
+Telegram receipts lacking a final `SIGNAL_CHECKED` event. Exit status 1 means
+unfinished receipts were found; 0 means none. It never reprocesses a signal,
+changes duplicate claims, or submits orders. Investigate the listed receipts
+manually; old messages must not become automatic trades after a restart.
 
 The CI workflow runs the same lint, type, and test checks. No credential is
 needed for this build slice.
