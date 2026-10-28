@@ -17,6 +17,7 @@ def valid_values() -> dict[str, str]:
         "CODEXBOT_FNO_ACTIVE": "true",
         "CODEXBOT_GROUP_IDS": "-1001,-1002",
         "CODEXBOT_AUTHORIZED_SOURCE_IDS": "2001,2002",
+        "CODEXBOT_OPERATOR_IDS": "3001",
         "CODEXBOT_LOG_GROUP_ID": "-9001",
         "CODEXBOT_DATABASE_PATH": "/var/lib/codexbot/codexbot.sqlite3",
         "CODEXBOT_INSTRUMENT_CACHE_DIRECTORY": "/var/lib/codexbot/instruments",
@@ -49,6 +50,7 @@ def test_configuration_defaults_only_common_mode_to_test() -> None:
     assert configuration.settings.fno_active is True
     assert configuration.settings.allowed_group_ids == frozenset({-1001, -1002})
     assert configuration.settings.authorized_source_ids == frozenset({2001, 2002})
+    assert configuration.settings.authorized_operator_ids == frozenset({3001})
     assert configuration.settings.instrument_maximum_age.total_seconds() == 3600
     assert configuration.settings.risk_limits is not None
     assert str(configuration.settings.risk_limits.maximum_order_amount) == "100000"
@@ -192,6 +194,14 @@ def test_missing_secret_fails_without_echoing_secret_values() -> None:
         configuration_from_mapping(values)
 
     assert "BASE32SECRET" not in str(error.value)
+
+
+def test_log_group_must_be_separate_from_signal_groups() -> None:
+    values = valid_values()
+    values["CODEXBOT_LOG_GROUP_ID"] = "-1001"
+
+    with pytest.raises(SettingsError, match="separate from signal groups"):
+        configuration_from_mapping(values)
 
 
 def test_loads_owner_only_regular_environment_file(tmp_path: Path) -> None:

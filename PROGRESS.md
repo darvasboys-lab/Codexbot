@@ -21,6 +21,7 @@ are tracked separately so offline tests cannot be mistaken for deployment proof.
 | Fixed-fractional sizing and capital risk | Implemented offline | Exact risk/allocation values and sector classification evidence required |
 | Delivery-only routing and session policy | Implemented offline | Executor absent; BSE calendar and failure actions remain open |
 | Telegram listener and log-group reporting | Implemented offline | Operator-attended session and configured-group TEST required |
+| Authenticated operator feedback and history | Implemented offline | Actual operator/log IDs and credentialed TEST required |
 | Dhan authentication and read-only reconciliation | Implemented offline | Dhan credentials and account read-only TEST required |
 | Emergency stop and SSH status | Implemented offline | VM permissions and pending-order cancellation require later executor |
 | 08:00 component health | Implemented as one-shot check | Calendar, missed-run, retry, and notification policy required |
@@ -33,7 +34,7 @@ are tracked separately so offline tests cannot be mistaken for deployment proof.
 - Python 3.12 locked environment: passing.
 - Ruff: passing.
 - Strict mypy: passing.
-- Automated tests: 226 passing.
+- Automated tests: 238 passing.
 - GitHub CI: required for every push to `main`.
 - Broker write methods: absent.
 - Paper trading and simulated portfolio state: absent.
@@ -70,13 +71,13 @@ are tracked separately so offline tests cannot be mistaken for deployment proof.
 
 ## Next safe work queue
 
-1. Add authenticated feedback command storage without automatic rule changes or
-   replaying old messages.
-2. Compose quote, sizing, delivery routing, capital, sector, and session gates
+1. Compose quote, sizing, delivery routing, capital, sector, and session gates
    after D-01/D-04/D-05/D-09 are answered; all rejections precede dedup.
-3. Add dynamic NSE calendar cache/validation and terminal override history; keep
+2. Add dynamic NSE calendar cache/validation and terminal override history; keep
    BSE closed until its official source is verified.
-4. Add audit-derived daily summary delivery and terminal history views.
+3. Add audit-derived daily summary delivery and broader terminal audit views.
+4. Add a manual feedback review/export workflow after its approval semantics are
+   agreed; storage must never auto-apply a rule or replay a signal.
 5. Prepare the new VM plan after D-10 is supplied; deployment remains a separate
    approval step.
 

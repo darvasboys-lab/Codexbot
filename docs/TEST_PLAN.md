@@ -56,6 +56,10 @@ separately approved live test.
 - Verify signal reports show pending gates and no broker action; verify daily
   summaries count only immutable events within the Asia/Kolkata service date and
   cannot be confused with simulated orders, fills, or holdings.
+- Verify feedback requires the separate log group and operator allowlist, rejects
+  forwarding/malformed/unknown targets, is idempotent and append-only, remains
+  `PENDING_REVIEW`, does not expose notes in acknowledgements/audit details, and
+  appears only in bounded local history and the daily count.
 - Verify TOTP against an RFC vector, naive IST token expiry, response client ID,
   token expiry, secret-free HTTP errors, strict fund-limit fields, and that the
   Dhan adapter exposes no write endpoint.
@@ -82,7 +86,7 @@ separately approved live test.
   cancel/reconcile-before-retry, no market conversion, IST phase boundaries, and
   fail-closed local-calendar/manual-override behavior.
 
-Current result: 226 tests pass. Ruff and strict mypy pass.
+Current result: 238 tests pass. Ruff and strict mypy pass.
 
 ## 2. Remaining parser and reference-rule tests
 

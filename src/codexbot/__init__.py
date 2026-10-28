@@ -20,6 +20,12 @@ from codexbot.execution_policy import (
     TimeoutAction,
     timeout_action,
 )
+from codexbot.feedback import (
+    FeedbackEnvelope,
+    FeedbackError,
+    OperatorFeedbackService,
+    feedback_envelope_from_event,
+)
 from codexbot.health import SystemHealthCoordinator, SystemHealthReport, scheduled_health_time
 from codexbot.instrument_cache import (
     DHAN_DETAILED_MASTER_URL,
@@ -61,6 +67,7 @@ from codexbot.persistence import (
     DailyAuditSummary,
     DuplicateClaimResult,
     EmergencyStopStatus,
+    OperatorFeedback,
     SignalReceipt,
     SQLiteJournal,
 )
@@ -82,6 +89,8 @@ from codexbot.processing import (
 )
 from codexbot.reporting import (
     format_daily_summary,
+    format_feedback_recorded,
+    format_feedback_rejected,
     format_listener_error,
     format_processing_result,
 )
@@ -175,6 +184,8 @@ __all__ = [
     "DownloadEvidence",
     "DuplicateClaimResult",
     "EmergencyStopStatus",
+    "FeedbackEnvelope",
+    "FeedbackError",
     "EntryRiskFacts",
     "ExecutionMode",
     "EquityQuote",
@@ -200,6 +211,8 @@ __all__ = [
     "NetworkTimeoutPolicy",
     "OptionType",
     "OptionEntryPrice",
+    "OperatorFeedback",
+    "OperatorFeedbackService",
     "ParsedMessage",
     "ParseReason",
     "PendingGate",
@@ -241,11 +254,14 @@ __all__ = [
     "evaluate_capital_risk",
     "evaluate_entry_risk",
     "format_daily_summary",
+    "format_feedback_recorded",
+    "format_feedback_rejected",
     "format_listener_error",
     "format_processing_result",
     "calculate_option_entry_price",
     "harden_telegram_session",
     "generate_totp",
+    "feedback_envelope_from_event",
     "load_protected_environment",
     "scheduled_health_time",
     "select_delivery_route",

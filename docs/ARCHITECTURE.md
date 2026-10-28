@@ -91,6 +91,10 @@ list is never evidence that order submission is authorized.
 - **Reporting:** formats deterministic results without raw Telegram text and
   derives daily counts from immutable events using Asia/Kolkata date boundaries.
   Summary scheduling remains outside the formatter.
+- **Operator feedback:** a log-group-only command authenticated by a separate
+  operator-ID allowlist references an immutable source group/message identity.
+  Accepted text is append-only and `PENDING_REVIEW`; acknowledgements never echo
+  it. The component exposes no apply, replay, checker mutation, or broker API.
 - **Admin CLI:** status, effective settings (redacted), orders, positions, errors,
   service control, emergency stop, and separately confirmed close action over SSH.
   The implemented status shows WAL, emergency stop, latest real-broker snapshot
@@ -106,7 +110,7 @@ One protected environment file supplies the single-instance runtime settings and
 credentials. The loader requires service-user ownership, a regular non-symlink
 file, and mode `0600` or stricter. It accepts only documented keys and performs no
 shell expansion. TEST is the sole default; both segment flags, source identities,
-paths, instrument age, Telegram credentials/session path, and Dhan TOTP inputs are
+paths, instrument age, operator IDs, Telegram credentials/session path, and Dhan TOTP inputs are
 explicit. Active equity also requires Yahoo ages no greater than 3 seconds, the
 percentage above market, and fixed-fractional values. Any active segment requires
 all five positive absolute risk values. Secret
@@ -140,7 +144,8 @@ Every connection enables foreign keys, a bounded busy timeout, WAL mode, and
 `synchronous=NORMAL`. First receipt uses `(group ID, Telegram message ID)` as its
 idempotent identity. Duplicate checks run in `BEGIN IMMEDIATE`, so concurrent
 groups cannot both accept the same option key. Database triggers reject updates
-and deletes against receipt, audit, claim, and decision tables. Backup retention,
+and deletes against receipt, audit, claim, decision, feedback, control, and broker
+observation tables. Backup retention,
 encryption, and recovery objectives remain deployment decisions.
 
 ## Failure posture

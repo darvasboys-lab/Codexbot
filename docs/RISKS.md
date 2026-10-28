@@ -23,3 +23,4 @@ Status date: 2026-10-28 (Asia/Kolkata)
 | Broker/API behavior changes | Pin tested client behavior, monitor official release notes, contract-test read APIs, reverify before LIVE | Ongoing |
 | Health display creates false LIVE confidence | Separate observation health from LIVE capability; include stop and executor state; never log credentials or funds in the health audit | Implemented; notification policy open |
 | Telegram log leaks signal or exception data | Plain text contains IDs, fixed reason/error codes, and no raw message/exception text; reports state no broker action | Implemented offline; credentialed log-group TEST pending |
+| Feedback changes rules or trades an old message | Authenticate separate operator IDs in the separate log group; store only `PENDING_REVIEW`; expose no apply/replay/order path; acknowledge without echoing notes | Implemented offline; credentialed operator TEST pending |

@@ -127,6 +127,16 @@ and always state `Trade ready: NO` and `Broker action: NONE`. Daily summary coun
 are derived from immutable Asia/Kolkata audit events; automated delivery still
 depends on the open calendar and notification schedule.
 
+The same listener accepts `/feedback <source_group_id>:<message_id> <review note>`
+only in the separate log group and only from a configured operator ID. Forwarded
+commands and unknown targets are rejected. Accepted notes remain append-only with
+status `PENDING_REVIEW`; acknowledgements do not echo the note and state that no
+rule change, replay, or broker action occurred. Review locally with:
+
+```bash
+codexbot-admin feedback-history --database /var/lib/codexbot/codexbot.sqlite3
+```
+
 The runtime health coordinator refreshes Dhan authentication and combines the
 read-only broker probe with Telegram connection/authorization, SQLite integrity,
 emergency-stop state, and executor availability. It writes one secret-free audit

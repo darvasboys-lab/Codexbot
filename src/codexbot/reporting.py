@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from codexbot.persistence import DailyAuditSummary
+from codexbot.persistence import DailyAuditSummary, OperatorFeedback
 from codexbot.processing import ProcessingResult
 
 
@@ -49,6 +49,7 @@ def format_daily_summary(summary: DailyAuditSummary) -> str:
             f"Duplicates rejected: {summary.duplicates_rejected}",
             f"Unhealthy system checks: {summary.unhealthy_system_checks}",
             f"Real broker snapshots: {summary.broker_snapshots}",
+            f"Operator feedback pending review: {summary.operator_feedback_pending}",
             "Simulated orders/fills/holdings: NEVER CREATED",
         ]
     )
@@ -61,6 +62,36 @@ def format_listener_error(*, execution_mode: str, error_code: str) -> str:
         [
             f"[{execution_mode}] TELEGRAM PROCESSING ERROR",
             f"Error code: {error_code}",
+            "Broker action: NONE",
+        ]
+    )
+
+
+def format_feedback_recorded(feedback: OperatorFeedback) -> str:
+    """Confirm durable review status without echoing the operator's note."""
+
+    return "\n".join(
+        [
+            "FEEDBACK RECORDED",
+            f"Feedback ID: {feedback.id}",
+            f"Signal: {feedback.source_group_id}:{feedback.source_telegram_message_id}",
+            "Status: PENDING_REVIEW",
+            "Rule change: NONE",
+            "Message replay: NONE",
+            "Broker action: NONE",
+        ]
+    )
+
+
+def format_feedback_rejected(error_code: str) -> str:
+    """Report only the stable rejection code; never echo command content."""
+
+    return "\n".join(
+        [
+            "FEEDBACK REJECTED",
+            f"Reason: {error_code}",
+            "Rule change: NONE",
+            "Message replay: NONE",
             "Broker action: NONE",
         ]
     )

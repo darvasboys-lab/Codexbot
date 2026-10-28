@@ -24,6 +24,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     summary_parser.add_argument("--database", type=Path, required=True)
     summary_parser.add_argument("--date", type=date.fromisoformat, required=True)
+    feedback_parser = subparsers.add_parser(
+        "feedback-history", help="show append-only operator feedback pending review"
+    )
+    feedback_parser.add_argument("--database", type=Path, required=True)
+    feedback_parser.add_argument("--limit", type=int, default=20)
     stop_parser = subparsers.add_parser(
         "emergency-stop", help="inspect or change the durable new-entry gate"
     )
@@ -43,6 +48,20 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
     if arguments.command == "daily-summary":
         print(format_daily_summary(journal.daily_audit_summary(arguments.date)))
+        return 0
+    if arguments.command == "feedback-history":
+        payload = [
+            {
+                "feedback_id": item.id,
+                "feedback_text": item.feedback_text,
+                "operator_id": item.operator_id,
+                "received_at": item.received_at.isoformat(),
+                "signal": f"{item.source_group_id}:{item.source_telegram_message_id}",
+                "status": item.status,
+            }
+            for item in journal.recent_operator_feedback(limit=arguments.limit)
+        ]
+        print(json.dumps(payload, sort_keys=True, separators=(",", ":")))
         return 0
     if arguments.command != "emergency-stop":
         parser.error("unknown command")

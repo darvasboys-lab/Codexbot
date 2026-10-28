@@ -52,6 +52,10 @@ Status date: 2026-10-28 (Asia/Kolkata)
 - Default plain-text log-group result/error reporting without raw message or
   exception text, explicit no-broker-action labeling, and audit-derived
   Asia/Kolkata daily summary counts.
+- Authenticated log-group feedback commands tied to existing signal receipts,
+  with separate operator IDs, forwarded-command rejection, idempotent append-only
+  `PENDING_REVIEW` storage, safe acknowledgements, daily counts, and bounded SSH
+  history. There is no rule-apply or signal-replay path.
 - `PROGRESS.md` milestone/decision dashboard separating offline implementation,
   credentialed TEST evidence, deployment, and LIVE authorization.
 - Secret-safe Dhan TOTP generation, access-token response identity/expiry checks,
@@ -107,8 +111,8 @@ Status date: 2026-10-28 (Asia/Kolkata)
 - Equity BUY, SELL, expiry-omitted non-index stock-option, and additional
   malformed parser examples.
 - Production instrument refresh schedule and maximum accepted snapshot age.
-- Interactive Telegram session setup and live credentialed listener verification;
-  authenticated operator feedback remains planned.
+- Interactive Telegram session setup and live credentialed listener/feedback
+  verification with actual group and operator IDs.
 - Read-only Dhan margin connectivity. Token, fund, order, trade, and position
   readers are implemented but await credentialed verification.
 - Journal retention/backup scheduling and comparison/action policy for restart

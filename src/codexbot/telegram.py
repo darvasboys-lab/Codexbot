@@ -17,8 +17,15 @@ from typing import Any, Protocol
 
 from telethon import TelegramClient, events, utils  # type: ignore[import-untyped]
 
+from codexbot.feedback import FeedbackError, OperatorFeedbackService, feedback_envelope_from_event
+from codexbot.persistence import SQLiteJournal
 from codexbot.processing import ProcessingResult, SignalProcessor, TelegramEnvelope
-from codexbot.reporting import format_listener_error, format_processing_result
+from codexbot.reporting import (
+    format_feedback_recorded,
+    format_feedback_rejected,
+    format_listener_error,
+    format_processing_result,
+)
 from codexbot.settings import BotSettings, TelegramCredentials
 
 
@@ -54,6 +61,7 @@ class TelethonListener:
         processor: SignalProcessor,
         result_handler: ResultHandler | None = None,
         error_handler: ErrorHandler | None = None,
+        feedback_service: OperatorFeedbackService | None = None,
         clock: Callable[[], datetime] | None = None,
         client_factory: Callable[..., TelegramClient] = TelegramClient,
     ) -> None:
@@ -62,6 +70,19 @@ class TelethonListener:
         self._processor = processor
         self._result_handler = result_handler
         self._error_handler = error_handler or _ignore_error
+        if feedback_service is None:
+            feedback_journal = SQLiteJournal(settings.database_path)
+            previous_umask = os.umask(0o077)
+            try:
+                feedback_journal.initialize()
+            finally:
+                os.umask(previous_umask)
+            feedback_service = OperatorFeedbackService(
+                journal=feedback_journal,
+                log_group_id=settings.log_group_id,
+                authorized_operator_ids=settings.authorized_operator_ids,
+            )
+        self._feedback_service = feedback_service
         self._clock = clock or (lambda: datetime.now(UTC))
         self._client_factory = client_factory
         self._client: TelegramClient | None = None
@@ -85,11 +106,13 @@ class TelethonListener:
             )
             self._client = client
 
-            @client.on(  # type: ignore[untyped-decorator]
-                events.NewMessage(chats=list(self._settings.allowed_group_ids))
+            monitored_chats = sorted(
+                {*self._settings.allowed_group_ids, self._settings.log_group_id}
             )
+
+            @client.on(events.NewMessage(chats=monitored_chats))  # type: ignore[untyped-decorator]
             async def handle_new_message(event: Any) -> None:
-                await self._handle_event(event)
+                await self._route_event(event)
 
             await client.connect()
             self.health.connected = bool(client.is_connected())
@@ -144,6 +167,40 @@ class TelethonListener:
                     )
                 except Exception:
                     pass
+
+    async def _route_event(self, event: Any) -> None:
+        group_id = int(event.chat_id)
+        if group_id == self._settings.log_group_id:
+            if (event.raw_text or "").strip().startswith("/feedback"):
+                await self._handle_feedback_event(event)
+            return
+        if group_id in self._settings.allowed_group_ids:
+            await self._handle_event(event)
+
+    async def _handle_feedback_event(self, event: Any) -> None:
+        self.health.last_received_at = _aware_utc(self._clock())
+        try:
+            envelope = feedback_envelope_from_event(event)
+            feedback = await asyncio.to_thread(self._feedback_service.process, envelope)
+            self.health.last_processed_at = _aware_utc(self._clock())
+            self.health.last_error_code = None
+            await self._send_log_text(format_feedback_recorded(feedback))
+        except FeedbackError as error:
+            self.health.last_processed_at = _aware_utc(self._clock())
+            self.health.last_error_code = None
+            await self._send_log_text(format_feedback_rejected(str(error)))
+        except Exception as error:
+            error_code = type(error).__name__
+            self.health.last_error_code = error_code
+            try:
+                await self._send_log_text(
+                    format_listener_error(
+                        execution_mode=self._settings.mode.value,
+                        error_code=error_code,
+                    )
+                )
+            except Exception:
+                pass
 
     async def _send_result_to_log(self, result: ProcessingResult) -> None:
         await self._send_log_text(format_processing_result(result))

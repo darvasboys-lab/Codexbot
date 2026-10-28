@@ -14,12 +14,14 @@ from codexbot import (
     CheckDisposition,
     CheckReport,
     ExecutionMode,
+    OperatorFeedbackService,
     ParsedMessage,
     ParseReason,
     ProcessingResult,
     SecretValue,
     SignalProcessor,
     SignalReceipt,
+    SQLiteJournal,
     TelegramCredentials,
     TelegramListenerError,
     TelethonListener,
@@ -31,17 +33,24 @@ from codexbot import (
 NOW = datetime(2026, 10, 27, 4, 0, tzinfo=UTC)
 
 
-def event(*, forwarded_peer: object | None = None, sender_id: int | None = 2001) -> Any:
+def event(
+    *,
+    forwarded_peer: object | None = None,
+    sender_id: int | None = 2001,
+    chat_id: int = -1001,
+    message_id: int = 42,
+    text: str = "CDSL 1400CE OCT @33-35",
+) -> Any:
     forward = (
         SimpleNamespace(from_id=forwarded_peer, saved_from_peer=None)
         if forwarded_peer is not None
         else None
     )
     return SimpleNamespace(
-        chat_id=-1001,
+        chat_id=chat_id,
         sender_id=sender_id,
-        raw_text="CDSL 1400CE OCT @33-35",
-        message=SimpleNamespace(id=42, date=NOW, fwd_from=forward),
+        raw_text=text,
+        message=SimpleNamespace(id=message_id, date=NOW, fwd_from=forward),
     )
 
 
@@ -52,6 +61,7 @@ def settings(session_path: Path) -> BotSettings:
         fno_active=True,
         allowed_group_ids=frozenset({-1001}),
         authorized_source_ids=frozenset({2001}),
+        authorized_operator_ids=frozenset({3001}),
         log_group_id=-9001,
         database_path=session_path.parent / "codexbot.sqlite3",
         instrument_cache_directory=session_path.parent / "instruments",
@@ -287,4 +297,51 @@ def test_listener_reports_only_error_class_without_sensitive_exception_text(
     message = fake_client.sent_messages[0][1]
     assert "Error code: RuntimeError" in message
     assert "sensitive upstream detail" not in message
+    assert "Broker action: NONE" in message
+
+
+def test_listener_routes_authenticated_feedback_without_signal_processing(
+    tmp_path: Path,
+) -> None:
+    session_path = private_session(tmp_path)
+    fake_client = FakeClient(authorized=True)
+    fake_client.connected = True
+    journal = SQLiteJournal(tmp_path / "codexbot.sqlite3", clock=lambda: NOW)
+    journal.initialize()
+    journal.record_signal_receipt(
+        source_group_id=-1001,
+        telegram_message_id=42,
+        sent_at=NOW,
+    )
+    feedback_service = OperatorFeedbackService(
+        journal=journal,
+        log_group_id=-9001,
+        authorized_operator_ids=frozenset({3001}),
+    )
+    listener = TelethonListener(
+        settings=settings(session_path),
+        credentials=TelegramCredentials(api_id=123, api_hash=SecretValue("secret")),
+        processor=cast(SignalProcessor, FailingProcessor()),
+        feedback_service=feedback_service,
+        clock=lambda: NOW,
+    )
+    listener._client = cast(Any, fake_client)
+
+    asyncio.run(
+        listener._route_event(
+            event(
+                chat_id=-9001,
+                sender_id=3001,
+                message_id=77,
+                text="/feedback -1001:42 review parser rejection",
+            )
+        )
+    )
+
+    assert listener.health.last_error_code is None
+    assert journal.recent_operator_feedback()[0].status == "PENDING_REVIEW"
+    message = fake_client.sent_messages[0][1]
+    assert "FEEDBACK RECORDED" in message
+    assert "Rule change: NONE" in message
+    assert "Message replay: NONE" in message
     assert "Broker action: NONE" in message

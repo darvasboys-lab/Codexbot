@@ -61,6 +61,7 @@ class BotSettings:
     fno_active: bool
     allowed_group_ids: frozenset[int]
     authorized_source_ids: frozenset[int]
+    authorized_operator_ids: frozenset[int]
     log_group_id: int
     database_path: Path
     instrument_cache_directory: Path
@@ -154,13 +155,18 @@ def configuration_from_mapping(values: Mapping[str, str]) -> RuntimeConfiguratio
     if fno_active and option_sizing is None:
         raise SettingsError("active F&O requires an explicit option sizing mode and value")
 
+    allowed_group_ids = _required_id_set(values, "CODEXBOT_GROUP_IDS")
+    log_group_id = _required_nonzero_int(values, "CODEXBOT_LOG_GROUP_ID")
+    if log_group_id in allowed_group_ids:
+        raise SettingsError("CODEXBOT_LOG_GROUP_ID must be separate from signal groups")
     settings = BotSettings(
         mode=mode,
         equity_active=equity_active,
         fno_active=fno_active,
-        allowed_group_ids=_required_id_set(values, "CODEXBOT_GROUP_IDS"),
+        allowed_group_ids=allowed_group_ids,
         authorized_source_ids=_required_id_set(values, "CODEXBOT_AUTHORIZED_SOURCE_IDS"),
-        log_group_id=_required_nonzero_int(values, "CODEXBOT_LOG_GROUP_ID"),
+        authorized_operator_ids=_required_id_set(values, "CODEXBOT_OPERATOR_IDS"),
+        log_group_id=log_group_id,
         database_path=_required_path(values, "CODEXBOT_DATABASE_PATH"),
         instrument_cache_directory=_required_path(values, "CODEXBOT_INSTRUMENT_CACHE_DIRECTORY"),
         instrument_maximum_age=timedelta(
@@ -405,6 +411,7 @@ _KNOWN_KEYS = frozenset(
         "CODEXBOT_FNO_ACTIVE",
         "CODEXBOT_GROUP_IDS",
         "CODEXBOT_AUTHORIZED_SOURCE_IDS",
+        "CODEXBOT_OPERATOR_IDS",
         "CODEXBOT_LOG_GROUP_ID",
         "CODEXBOT_DATABASE_PATH",
         "CODEXBOT_INSTRUMENT_CACHE_DIRECTORY",

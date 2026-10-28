@@ -34,6 +34,7 @@ _REQUIRED_TABLES = frozenset(
         "broker_order_observations",
         "broker_trade_observations",
         "broker_position_observations",
+        "operator_feedback_events",
     }
 )
 
@@ -95,6 +96,21 @@ class DailyAuditSummary:
     duplicates_rejected: int
     unhealthy_system_checks: int
     broker_snapshots: int
+    operator_feedback_pending: int
+
+
+@dataclass(frozen=True, slots=True)
+class OperatorFeedback:
+    id: int
+    signal_receipt_id: int
+    source_group_id: int
+    source_telegram_message_id: int
+    feedback_group_id: int
+    feedback_telegram_message_id: int
+    operator_id: int
+    feedback_text: str
+    received_at: datetime
+    status: str
 
 
 class SQLiteJournal:
@@ -416,6 +432,124 @@ class SQLiteJournal:
                 matched_claim_id=claim_id,
             )
 
+    def record_operator_feedback(
+        self,
+        *,
+        source_group_id: int,
+        source_telegram_message_id: int,
+        feedback_group_id: int,
+        feedback_telegram_message_id: int,
+        operator_id: int,
+        feedback_text: str,
+    ) -> OperatorFeedback:
+        """Append authenticated review feedback without applying or replaying it."""
+
+        normalized_text = feedback_text.strip()
+        if not normalized_text:
+            raise ValueError("feedback text is required")
+        if len(normalized_text) > 1_000:
+            raise ValueError("feedback text cannot exceed 1000 characters")
+        if feedback_group_id == 0 or operator_id == 0:
+            raise ValueError("feedback group and operator IDs cannot be zero")
+        if feedback_telegram_message_id <= 0 or source_telegram_message_id <= 0:
+            raise ValueError("Telegram message IDs must be positive")
+
+        with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            existing = connection.execute(
+                """
+                SELECT f.id, f.signal_receipt_id, r.source_group_id,
+                       r.telegram_message_id AS source_telegram_message_id,
+                       f.feedback_group_id, f.feedback_telegram_message_id,
+                       f.operator_id, f.feedback_text, f.received_at, f.status
+                FROM operator_feedback_events AS f
+                JOIN signal_receipts AS r ON r.id = f.signal_receipt_id
+                WHERE f.feedback_group_id = ? AND f.feedback_telegram_message_id = ?
+                """,
+                (feedback_group_id, feedback_telegram_message_id),
+            ).fetchone()
+            if existing is not None:
+                connection.commit()
+                return _feedback_from_row(existing)
+
+            receipt = connection.execute(
+                """
+                SELECT id
+                FROM signal_receipts
+                WHERE source_group_id = ? AND telegram_message_id = ?
+                """,
+                (source_group_id, source_telegram_message_id),
+            ).fetchone()
+            if receipt is None:
+                raise ValueError("feedback target signal receipt does not exist")
+            received_at = self._now()
+            cursor = connection.execute(
+                """
+                INSERT INTO operator_feedback_events (
+                    signal_receipt_id, feedback_group_id,
+                    feedback_telegram_message_id, operator_id, feedback_text,
+                    received_at, status
+                ) VALUES (?, ?, ?, ?, ?, ?, 'PENDING_REVIEW')
+                """,
+                (
+                    int(receipt["id"]),
+                    feedback_group_id,
+                    feedback_telegram_message_id,
+                    operator_id,
+                    normalized_text,
+                    _datetime_text(received_at),
+                ),
+            )
+            feedback_id = _last_row_id(cursor)
+            self._append_audit_event(
+                connection,
+                event_type="OPERATOR_FEEDBACK_RECORDED",
+                entity_type="operator_feedback",
+                entity_id=str(feedback_id),
+                state="PENDING_REVIEW",
+                details={
+                    "operator_id": operator_id,
+                    "signal_receipt_id": int(receipt["id"]),
+                    "source_group_id": source_group_id,
+                    "source_telegram_message_id": source_telegram_message_id,
+                },
+                occurred_at=received_at,
+            )
+            connection.commit()
+        return OperatorFeedback(
+            id=feedback_id,
+            signal_receipt_id=int(receipt["id"]),
+            source_group_id=source_group_id,
+            source_telegram_message_id=source_telegram_message_id,
+            feedback_group_id=feedback_group_id,
+            feedback_telegram_message_id=feedback_telegram_message_id,
+            operator_id=operator_id,
+            feedback_text=normalized_text,
+            received_at=received_at,
+            status="PENDING_REVIEW",
+        )
+
+    def recent_operator_feedback(self, *, limit: int = 20) -> tuple[OperatorFeedback, ...]:
+        """Return bounded newest-first feedback history for the local terminal."""
+
+        if limit <= 0 or limit > 100:
+            raise ValueError("feedback history limit must be between 1 and 100")
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT f.id, f.signal_receipt_id, r.source_group_id,
+                       r.telegram_message_id AS source_telegram_message_id,
+                       f.feedback_group_id, f.feedback_telegram_message_id,
+                       f.operator_id, f.feedback_text, f.received_at, f.status
+                FROM operator_feedback_events AS f
+                JOIN signal_receipts AS r ON r.id = f.signal_receipt_id
+                ORDER BY f.id DESC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+        return tuple(_feedback_from_row(row) for row in rows)
+
     def emergency_stop_status(self) -> EmergencyStopStatus:
         """Return the latest stop state; a new database starts engaged."""
 
@@ -679,6 +813,9 @@ class SQLiteJournal:
             duplicates_rejected=counts.get(("OPTION_DUPLICATE_REJECTED", "DUPLICATE"), 0),
             unhealthy_system_checks=counts.get(("SYSTEM_HEALTH_CHECKED", "UNHEALTHY"), 0),
             broker_snapshots=counts.get(("BROKER_RECONCILIATION_OBSERVED", "DURABLE"), 0),
+            operator_feedback_pending=counts.get(
+                ("OPERATOR_FEEDBACK_RECORDED", "PENDING_REVIEW"), 0
+            ),
         )
 
     def _connect(self) -> sqlite3.Connection:
@@ -797,6 +934,21 @@ def _emergency_stop_from_row(row: sqlite3.Row) -> EmergencyStopStatus:
     )
 
 
+def _feedback_from_row(row: sqlite3.Row) -> OperatorFeedback:
+    return OperatorFeedback(
+        id=int(row["id"]),
+        signal_receipt_id=int(row["signal_receipt_id"]),
+        source_group_id=int(row["source_group_id"]),
+        source_telegram_message_id=int(row["source_telegram_message_id"]),
+        feedback_group_id=int(row["feedback_group_id"]),
+        feedback_telegram_message_id=int(row["feedback_telegram_message_id"]),
+        operator_id=int(row["operator_id"]),
+        feedback_text=str(row["feedback_text"]),
+        received_at=_parse_datetime(str(row["received_at"])),
+        status=str(row["status"]),
+    )
+
+
 def _last_row_id(cursor: sqlite3.Cursor) -> int:
     if cursor.lastrowid is None:
         raise RuntimeError("SQLite did not return a row ID")
@@ -882,6 +1034,21 @@ CREATE TABLE IF NOT EXISTS runtime_control_events (
     reason TEXT NOT NULL CHECK (length(reason) BETWEEN 1 AND 500),
     actor TEXT NOT NULL CHECK (length(actor) BETWEEN 1 AND 200)
 );
+
+CREATE TABLE IF NOT EXISTS operator_feedback_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    signal_receipt_id INTEGER NOT NULL REFERENCES signal_receipts(id),
+    feedback_group_id INTEGER NOT NULL,
+    feedback_telegram_message_id INTEGER NOT NULL CHECK (feedback_telegram_message_id > 0),
+    operator_id INTEGER NOT NULL,
+    feedback_text TEXT NOT NULL CHECK (length(feedback_text) BETWEEN 1 AND 1000),
+    received_at TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status = 'PENDING_REVIEW'),
+    UNIQUE (feedback_group_id, feedback_telegram_message_id)
+);
+
+CREATE INDEX IF NOT EXISTS operator_feedback_receipt_time
+ON operator_feedback_events (signal_receipt_id, received_at, id);
 
 CREATE TABLE IF NOT EXISTS broker_reconciliation_snapshots (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1009,6 +1176,18 @@ CREATE TRIGGER IF NOT EXISTS runtime_control_no_delete
 BEFORE DELETE ON runtime_control_events
 BEGIN
     SELECT RAISE(ABORT, 'runtime_control_events is append-only');
+END;
+
+CREATE TRIGGER IF NOT EXISTS operator_feedback_no_update
+BEFORE UPDATE ON operator_feedback_events
+BEGIN
+    SELECT RAISE(ABORT, 'operator_feedback_events is append-only');
+END;
+
+CREATE TRIGGER IF NOT EXISTS operator_feedback_no_delete
+BEFORE DELETE ON operator_feedback_events
+BEGIN
+    SELECT RAISE(ABORT, 'operator_feedback_events is append-only');
 END;
 
 CREATE TRIGGER IF NOT EXISTS broker_snapshots_no_update

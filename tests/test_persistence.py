@@ -374,3 +374,60 @@ def test_invalid_broker_snapshot_rolls_back_every_item(tmp_path: Path) -> None:
         assert connection.execute(
             "SELECT COUNT(*) FROM broker_reconciliation_snapshots"
         ).fetchone() == (0,)
+
+
+def test_operator_feedback_is_idempotent_append_only_and_audited(tmp_path: Path) -> None:
+    database_path = tmp_path / "codexbot.sqlite3"
+    journal = SQLiteJournal(database_path, clock=lambda: NOW)
+    journal.initialize()
+    journal.record_signal_receipt(
+        source_group_id=-1001,
+        telegram_message_id=42,
+        sent_at=NOW,
+    )
+
+    first = journal.record_operator_feedback(
+        source_group_id=-1001,
+        source_telegram_message_id=42,
+        feedback_group_id=-9001,
+        feedback_telegram_message_id=77,
+        operator_id=3001,
+        feedback_text="  parser should keep this rejected  ",
+    )
+    redelivery = journal.record_operator_feedback(
+        source_group_id=-1001,
+        source_telegram_message_id=42,
+        feedback_group_id=-9001,
+        feedback_telegram_message_id=77,
+        operator_id=3001,
+        feedback_text="different redelivery text is ignored",
+    )
+
+    assert redelivery == first
+    assert first.feedback_text == "parser should keep this rejected"
+    assert first.status == "PENDING_REVIEW"
+    assert journal.recent_operator_feedback() == (first,)
+    with sqlite3.connect(database_path) as connection:
+        audit = connection.execute(
+            "SELECT state, details_json FROM audit_events "
+            "WHERE event_type = 'OPERATOR_FEEDBACK_RECORDED'"
+        ).fetchall()
+        assert len(audit) == 1
+        assert "parser should" not in str(audit[0][1])
+        with pytest.raises(sqlite3.IntegrityError, match="append-only"):
+            connection.execute("UPDATE operator_feedback_events SET status = 'PENDING_REVIEW'")
+
+
+def test_operator_feedback_requires_existing_signal_receipt(tmp_path: Path) -> None:
+    journal = SQLiteJournal(tmp_path / "codexbot.sqlite3", clock=lambda: NOW)
+    journal.initialize()
+
+    with pytest.raises(ValueError, match="does not exist"):
+        journal.record_operator_feedback(
+            source_group_id=-1001,
+            source_telegram_message_id=42,
+            feedback_group_id=-9001,
+            feedback_telegram_message_id=77,
+            operator_id=3001,
+            feedback_text="review this",
+        )

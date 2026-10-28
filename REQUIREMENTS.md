@@ -142,6 +142,12 @@ answer. Code must not turn an open decision into an implicit default.
   separately verified official fallback.
 - Log recognized, rejected/filtered messages and reasons, validations, orders,
   errors, and a daily summary. Preserve an authenticated, immutable audit trail.
+- Accept operator feedback only in the separate configured log group from an
+  explicitly configured operator Telegram ID. The exact command is
+  `/feedback <source_group_id>:<message_id> <review note>`. Reject forwarded,
+  unauthorized, malformed, oversized, and unknown-target commands. Store accepted
+  notes append-only as `PENDING_REVIEW`; feedback cannot apply a rule, replay a
+  signal, change a decision, or perform a broker action.
 - The initial log-group format is plain text and excludes raw message and
   exception text. It shows stable reasons/pending gates, source/message identity,
   `Trade ready: NO`, and `Broker action: NONE`. Daily counts come only from the
@@ -187,9 +193,9 @@ answer. Code must not turn an open decision into an implicit default.
     define local-calendar refresh/expiry, late/missed checks, token-refresh and
     service failure, and notification retry. Automatic reauthentication is not
     assumed.
-12. **AI review:** choose which filtered chatter/rejections invoke AI, provider,
-    data policy, cost ceiling, latency deadline, timeout behavior, and authorized
-    feedback commands.
+12. **AI review:** authenticated feedback storage is implemented. Choose which
+    filtered chatter/rejections invoke AI, provider, data policy, cost ceiling,
+    latency deadline, timeout behavior, and the later manual rule-approval flow.
 13. **Risk and setup values:** provide the actual risk limits, active segments,
     group IDs, log destination, optional private broker-ack destination, equity
     percentage, sizing values, starting-capital source, sector classification

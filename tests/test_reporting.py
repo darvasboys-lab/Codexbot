@@ -101,12 +101,14 @@ def test_daily_summary_text_cannot_be_mistaken_for_paper_trading() -> None:
         duplicates_rejected=1,
         unhealthy_system_checks=0,
         broker_snapshots=0,
+        operator_feedback_pending=3,
     )
 
     report = format_daily_summary(summary)
 
     assert "Signals received: 10" in report
     assert "Real broker snapshots: 0" in report
+    assert "Operator feedback pending review: 3" in report
     assert "Simulated orders/fills/holdings: NEVER CREATED" in report
 
 

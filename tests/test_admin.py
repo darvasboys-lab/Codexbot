@@ -148,3 +148,38 @@ def test_admin_daily_summary_uses_requested_service_date(
     assert "DAILY SUMMARY 2026-10-28 Asia/Kolkata" in output
     assert "Signals received: 1" in output
     assert "Simulated orders/fills/holdings: NEVER CREATED" in output
+
+
+def test_admin_feedback_history_shows_pending_review_without_applying_it(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    database = tmp_path / "codexbot.sqlite3"
+    journal = SQLiteJournal(database, clock=lambda: NOW)
+    journal.initialize()
+    journal.record_signal_receipt(
+        source_group_id=-1001,
+        telegram_message_id=42,
+        sent_at=NOW,
+    )
+    journal.record_operator_feedback(
+        source_group_id=-1001,
+        source_telegram_message_id=42,
+        feedback_group_id=-9001,
+        feedback_telegram_message_id=77,
+        operator_id=3001,
+        feedback_text="review parser classification",
+    )
+
+    assert main(["feedback-history", "--database", str(database), "--limit", "5"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload == [
+        {
+            "feedback_id": 1,
+            "feedback_text": "review parser classification",
+            "operator_id": 3001,
+            "received_at": NOW.isoformat(),
+            "signal": "-1001:42",
+            "status": "PENDING_REVIEW",
+        }
+    ]
