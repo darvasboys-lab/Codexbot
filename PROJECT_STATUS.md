@@ -1,6 +1,6 @@
 # Project status
 
-Status date: 2026-10-27 (Asia/Kolkata)
+Status date: 2026-10-28 (Asia/Kolkata)
 
 ## Implemented
 
@@ -18,6 +18,9 @@ Status date: 2026-10-27 (Asia/Kolkata)
   strike, expiry, price, and CE/PE do not distinguish signals in the window.
 - Database integrity, consistent backup, and temporary restore-test functions and
   CLI commands.
+- Read-only restart inspection of durable receipts missing a final check, with
+  bounded CLI output and explicit detection of an existing option decision;
+  never reprocesses old messages or changes the journal.
 - Read-only Yahoo Finance NSE/BSE equity quote adapter with market and receipt
   timestamps, strict response validation, and caller-supplied freshness limits.
 - Conservative Telegram parser for the supplied compact option BUY and two EXIT
@@ -68,7 +71,9 @@ Status date: 2026-10-27 (Asia/Kolkata)
 - Interactive Telegram session setup and live credentialed listener verification;
   authenticated operator feedback remains planned.
 - Read-only Dhan funds, margin, order, trade, and position connectivity.
-- Journal orchestration, retention/backup scheduling, and restart reconciliation.
+- Journal orchestration, retention/backup scheduling, and full broker-aware
+  restart reconciliation. The offline unfinished-receipt diagnostic is not
+  broker reconciliation.
 - Pricing, sizing, funds, risk, emergency-stop, execution, partial-fill/retry, and
   protection logic.
 - 08:00 Asia/Kolkata health/token workflow and exchange calendar.
