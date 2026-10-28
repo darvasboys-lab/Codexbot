@@ -61,6 +61,9 @@ answer. Code must not turn an open decision into an implicit default.
 - Use SQLite in WAL mode on the single VM. Keep signal receipts, duplicate claims
   and decisions, and audit events append-only. Use atomic transactions for
   duplicate claims and maintain tested integrity, backup, and restore commands.
+- Require an owner-owned `0700` journal directory; reject symlinked or
+  group/world-accessible database paths; protect database, WAL/SHM sidecars, and
+  backups as `0600` files.
 - Deterministic local rules have final authority. AI may recheck potential
   rejections when available, but cannot override deterministic validation or
   change rules without approval.
@@ -140,6 +143,12 @@ answer. Code must not turn an open decision into an implicit default.
   until an authenticated manual open override, marked cautionary. The repository
   contains the official NSE 2026 CM/FO fallback; BSE stays closed without its
   separately verified official fallback.
+- Download the bounded official NSE CM/FO holiday response into an owner-only
+  atomic cache. Validate its shape, dates, single year, source, permissions, and
+  explicit maximum age before use; refresh failure preserves last-known-good.
+  Calendar cache health is part of the 08:00 system health decision. Dated NSE
+  manual open/clear actions require a local OS actor and reason in append-only
+  history and may cover verified special sessions. BSE has no override.
 - Log recognized, rejected/filtered messages and reasons, validations, orders,
   errors, and a daily summary. Preserve an authenticated, immutable audit trail.
 - Accept operator feedback only in the separate configured log group from an
@@ -158,6 +167,10 @@ answer. Code must not turn an open decision into an implicit default.
 - Protect credentials and Telegram session data. Never commit either.
 - Exclude Notion, Google Sheets, Kite, Railway, other brokers, and changes to the
   existing deployment.
+- Provide a runnable TEST observation service that loads only the protected
+  environment and validated instrument cache, then composes the journal, parser,
+  deterministic checker, resolver, Telegram listener, feedback, and reporting.
+  It must refuse `LIVE` while the broker write executor is absent.
 
 ## Open decisions — implementation blocked where affected
 
@@ -188,11 +201,11 @@ answer. Code must not turn an open decision into an implicit default.
    future cancellation/reconciliation and exit-protection behavior remain open.
 10. **Restart gaps:** decide whether missed Telegram messages are logged only or
     may be evaluated; old messages must never become automatic trades.
-11. **Calendar and 08:00 health check:** dynamic-failure/manual-open behavior is
-    approved. Add a verified official BSE fallback and special-session handling;
-    define local-calendar refresh/expiry, late/missed checks, token-refresh and
-    service failure, and notification retry. Automatic reauthentication is not
-    assumed.
+11. **Calendar and 08:00 health check:** NSE cache, fallback, special-session
+    override history, and cache health are implemented. Supply production cache
+    age/refresh timing; add a verified official BSE source; define late/missed
+    checks, token-refresh/service failure, and notification retry. Automatic
+    reauthentication is not assumed.
 12. **AI review:** authenticated feedback storage is implemented. Choose which
     filtered chatter/rejections invoke AI, provider, data policy, cost ceiling,
     latency deadline, timeout behavior, and the later manual rule-approval flow.

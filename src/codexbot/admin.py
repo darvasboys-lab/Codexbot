@@ -29,6 +29,24 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     feedback_parser.add_argument("--database", type=Path, required=True)
     feedback_parser.add_argument("--limit", type=int, default=20)
+    audit_parser = subparsers.add_parser(
+        "audit-history", help="show bounded immutable audit history"
+    )
+    audit_parser.add_argument("--database", type=Path, required=True)
+    audit_parser.add_argument("--limit", type=int, default=50)
+    audit_parser.add_argument("--event-type")
+    calendar_parser = subparsers.add_parser(
+        "calendar-override", help="inspect or change a dated manual market-open override"
+    )
+    calendar_parser.add_argument("--database", type=Path, required=True)
+    calendar_parser.add_argument("--date", type=date.fromisoformat, required=True)
+    calendar_parser.add_argument("--segment", choices=("NSE_CM", "NSE_FO"), required=True)
+    calendar_subparsers = calendar_parser.add_subparsers(dest="action", required=True)
+    calendar_subparsers.add_parser("status")
+    calendar_open = calendar_subparsers.add_parser("open")
+    calendar_open.add_argument("--reason", required=True)
+    calendar_clear = calendar_subparsers.add_parser("clear")
+    calendar_clear.add_argument("--reason", required=True)
     stop_parser = subparsers.add_parser(
         "emergency-stop", help="inspect or change the durable new-entry gate"
     )
@@ -62,6 +80,57 @@ def main(argv: Sequence[str] | None = None) -> int:
             for item in journal.recent_operator_feedback(limit=arguments.limit)
         ]
         print(json.dumps(payload, sort_keys=True, separators=(",", ":")))
+        return 0
+    if arguments.command == "audit-history":
+        events = journal.recent_audit_events(
+            limit=arguments.limit,
+            event_type=arguments.event_type,
+        )
+        payload = [
+            {
+                "details": json.loads(item.details_json),
+                "entity_id": item.entity_id,
+                "entity_type": item.entity_type,
+                "event_id": item.id,
+                "event_type": item.event_type,
+                "occurred_at": item.occurred_at.isoformat(),
+                "state": item.state,
+            }
+            for item in events
+        ]
+        print(json.dumps(payload, sort_keys=True, separators=(",", ":")))
+        return 0
+    if arguments.command == "calendar-override":
+        if arguments.action == "status":
+            calendar = journal.calendar_override_status(
+                service_date=arguments.date,
+                segment=arguments.segment,
+            )
+        else:
+            calendar = journal.set_calendar_override(
+                service_date=arguments.date,
+                segment=arguments.segment,
+                enabled=arguments.action == "open",
+                reason=arguments.reason,
+                actor=_local_actor(),
+            )
+        print(
+            json.dumps(
+                {
+                    "actor": calendar.actor,
+                    "changed_at": (
+                        calendar.changed_at.isoformat() if calendar.changed_at else None
+                    ),
+                    "enabled": calendar.enabled,
+                    "event_id": calendar.event_id,
+                    "reason": calendar.reason,
+                    "segment": calendar.segment,
+                    "service_date": calendar.service_date.isoformat(),
+                },
+                sort_keys=True,
+                separators=(",", ":"),
+            )
+        )
         return 0
     if arguments.command != "emergency-stop":
         parser.error("unknown command")

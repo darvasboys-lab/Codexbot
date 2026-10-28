@@ -431,3 +431,83 @@ def test_operator_feedback_requires_existing_signal_receipt(tmp_path: Path) -> N
             operator_id=3001,
             feedback_text="review this",
         )
+
+
+def test_calendar_override_history_is_dated_append_only_and_audited(tmp_path: Path) -> None:
+    database_path = tmp_path / "codexbot.sqlite3"
+    journal = SQLiteJournal(database_path, clock=lambda: NOW)
+    journal.initialize()
+    service_date = NOW.date()
+
+    opened = journal.set_calendar_override(
+        service_date=service_date,
+        segment="NSE_CM",
+        enabled=True,
+        reason="official special session confirmed",
+        actor="local-user:udit:uid:1000",
+    )
+    cleared = journal.set_calendar_override(
+        service_date=service_date,
+        segment="NSE_CM",
+        enabled=False,
+        reason="special session completed",
+        actor="local-user:udit:uid:1000",
+    )
+
+    assert opened.enabled is True
+    assert journal.calendar_override_status(service_date=service_date, segment="NSE_CM") == cleared
+    audit = journal.recent_audit_events(event_type="CALENDAR_OVERRIDE_CHANGED")
+    assert [item.state for item in audit] == ["CLEARED", "OPEN_ENABLED"]
+    with sqlite3.connect(database_path) as connection:
+        with pytest.raises(sqlite3.IntegrityError, match="append-only"):
+            connection.execute("DELETE FROM calendar_override_events")
+
+
+def test_calendar_override_defaults_closed_and_rejects_unknown_segment(tmp_path: Path) -> None:
+    journal = SQLiteJournal(tmp_path / "codexbot.sqlite3", clock=lambda: NOW)
+    journal.initialize()
+
+    status = journal.calendar_override_status(service_date=NOW.date(), segment="NSE_FO")
+
+    assert status.enabled is False
+    assert status.reason == "NO_OVERRIDE_RECORDED"
+    with pytest.raises(ValueError, match="calendar segment"):
+        journal.calendar_override_status(service_date=NOW.date(), segment="UNKNOWN")
+
+
+def test_recent_audit_history_is_bounded_and_filterable(tmp_path: Path) -> None:
+    journal = SQLiteJournal(tmp_path / "codexbot.sqlite3", clock=lambda: NOW)
+    journal.initialize()
+    journal.append_audit_event(event_type="FIRST", entity_type="system", entity_id=None, state="OK")
+    journal.append_audit_event(
+        event_type="SECOND", entity_type="system", entity_id=None, state="OK"
+    )
+
+    assert [item.event_type for item in journal.recent_audit_events(limit=1)] == ["SECOND"]
+    assert [item.event_type for item in journal.recent_audit_events(event_type="FIRST")] == [
+        "FIRST"
+    ]
+
+
+def test_journal_and_backup_are_owner_only_and_unsafe_paths_fail(tmp_path: Path) -> None:
+    database = tmp_path / "codexbot.sqlite3"
+    journal = SQLiteJournal(database, clock=lambda: NOW)
+    journal.initialize()
+
+    assert database.stat().st_mode & 0o077 == 0
+    backup = backup_database(database, tmp_path / "backup.sqlite3")
+    assert backup.stat().st_mode & 0o077 == 0
+
+    database.chmod(0o644)
+    with pytest.raises(PermissionError, match="owner-only"):
+        journal.journal_mode()
+
+
+def test_journal_rejects_symlinked_database_directory(tmp_path: Path) -> None:
+    real_directory = tmp_path / "real"
+    real_directory.mkdir(mode=0o700)
+    linked_directory = tmp_path / "linked"
+    linked_directory.symlink_to(real_directory, target_is_directory=True)
+
+    with pytest.raises(PermissionError, match="directory cannot be a symlink"):
+        SQLiteJournal(linked_directory / "codexbot.sqlite3", clock=lambda: NOW).initialize()

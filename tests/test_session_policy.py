@@ -1,10 +1,14 @@
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
 from codexbot import (
     CalendarSource,
     LocalHolidayCalendar,
+    NSECalendarCache,
+    NSECalendarSegment,
     SessionPhase,
+    SQLiteJournal,
+    TradingCalendarCoordinator,
     decide_trading_day,
     session_decision,
 )
@@ -67,3 +71,48 @@ def test_dynamic_calendar_response_has_priority() -> None:
 
     assert decision.market_open is True
     assert decision.source is CalendarSource.DYNAMIC
+
+
+def test_authenticated_manual_override_can_open_an_official_special_session() -> None:
+    decision = decide_trading_day(
+        date(2026, 11, 8),
+        dynamic_market_open=False,
+        local_calendar=None,
+        manual_open_override=True,
+    )
+
+    assert decision.market_open is True
+    assert decision.source is CalendarSource.MANUAL_OVERRIDE
+    assert decision.caution is True
+    assert decision.reason == "MANUAL_OPEN_OVERRIDE"
+
+
+def test_calendar_coordinator_uses_durable_override_when_dynamic_cache_is_missing(
+    tmp_path: Path,
+) -> None:
+    journal = SQLiteJournal(
+        tmp_path / "codexbot.sqlite3", clock=lambda: datetime(2026, 10, 28, tzinfo=UTC)
+    )
+    journal.initialize()
+    coordinator = TradingCalendarCoordinator(
+        cache=NSECalendarCache(tmp_path / "missing-calendar.json"),
+        journal=journal,
+        local_calendar_path=(Path(__file__).parents[1] / "config" / "exchange_holidays_2026.json"),
+        maximum_cache_age=timedelta(days=1),
+    )
+    day = date(2026, 10, 28)
+
+    closed = coordinator.decide(day, NSECalendarSegment.CASH)
+    journal.set_calendar_override(
+        service_date=day,
+        segment="NSE_CM",
+        enabled=True,
+        reason="operator verified official special opening",
+        actor="local-user:udit:uid:1000",
+    )
+    opened = coordinator.decide(day, NSECalendarSegment.CASH)
+
+    assert closed.market_open is False
+    assert closed.manual_override_required is True
+    assert opened.market_open is True
+    assert opened.source is CalendarSource.MANUAL_OVERRIDE

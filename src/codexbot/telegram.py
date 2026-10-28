@@ -11,7 +11,7 @@ import os
 import stat
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -21,6 +21,7 @@ from codexbot.feedback import FeedbackError, OperatorFeedbackService, feedback_e
 from codexbot.persistence import SQLiteJournal
 from codexbot.processing import ProcessingResult, SignalProcessor, TelegramEnvelope
 from codexbot.reporting import (
+    format_daily_summary,
     format_feedback_recorded,
     format_feedback_rejected,
     format_listener_error,
@@ -62,6 +63,7 @@ class TelethonListener:
         result_handler: ResultHandler | None = None,
         error_handler: ErrorHandler | None = None,
         feedback_service: OperatorFeedbackService | None = None,
+        journal: SQLiteJournal | None = None,
         clock: Callable[[], datetime] | None = None,
         client_factory: Callable[..., TelegramClient] = TelegramClient,
     ) -> None:
@@ -70,15 +72,17 @@ class TelethonListener:
         self._processor = processor
         self._result_handler = result_handler
         self._error_handler = error_handler or _ignore_error
-        if feedback_service is None:
-            feedback_journal = SQLiteJournal(settings.database_path)
+        if journal is None:
+            journal = SQLiteJournal(settings.database_path)
             previous_umask = os.umask(0o077)
             try:
-                feedback_journal.initialize()
+                journal.initialize()
             finally:
                 os.umask(previous_umask)
+        self._journal = journal
+        if feedback_service is None:
             feedback_service = OperatorFeedbackService(
-                journal=feedback_journal,
+                journal=journal,
                 log_group_id=settings.log_group_id,
                 authorized_operator_ids=settings.authorized_operator_ids,
             )
@@ -204,6 +208,12 @@ class TelethonListener:
 
     async def _send_result_to_log(self, result: ProcessingResult) -> None:
         await self._send_log_text(format_processing_result(result))
+
+    async def send_daily_summary(self, service_date: date) -> None:
+        """Deliver one audit-derived summary; scheduling remains external and fail-closed."""
+
+        summary = await asyncio.to_thread(self._journal.daily_audit_summary, service_date)
+        await self._send_log_text(format_daily_summary(summary))
 
     async def _send_log_text(self, text: str) -> None:
         client = self._client

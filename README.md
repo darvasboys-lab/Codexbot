@@ -33,7 +33,9 @@ instructions, unsupported text, and chart-only messages without a caption fail
 closed as non-actionable. Telegram SL, target, holding-period, and sizing prose do
 not alter parsed entry fields.
 
-The SQLite journal uses WAL mode and immutable first receipts. Its atomic
+The SQLite journal uses WAL mode and immutable first receipts. It refuses
+symlinked or group/world-accessible runtime paths and protects the database,
+WAL/SHM sidecars, and backups as owner-only files. Its atomic
 20-second stock-option claim uses canonical underlying ID + `BUY` + stock-option
 family, deliberately ignoring strike, expiry, price, and CE/PE. Audit, receipt,
 claim, and decision rows are append-only. The Yahoo adapter retrieves timestamped
@@ -116,6 +118,20 @@ confirmed cancellation before one retry, and no market conversion. The IST sessi
 policy allows entries only 09:16-15:10 on a proven open day, marks cancellation due
 at 15:10, and reconciliation/log rotation due at 15:35.
 
+The NSE calendar cache validates the official CM/FO holiday response before an
+atomic owner-only replacement. Stale, malformed, future, unsafe, wrong-year, and
+wrong-source caches fail closed. Refresh and inspect it with:
+
+```bash
+codexbot-calendar refresh --cache /var/lib/codexbot/nse-calendar.json
+codexbot-calendar status --cache /var/lib/codexbot/nse-calendar.json --max-age-seconds 86400
+```
+
+When official data is unavailable, a regular weekday stays closed until an
+audited local override. A verified NSE special session can be opened and cleared
+with `codexbot-admin calendar-override`; BSE cannot be overridden. Use
+`codexbot-admin audit-history` for bounded immutable event history.
+
 The Telegram adapter uses one Telethon user session and registers only
 `NewMessage` for configured groups. It extracts Telegram's marked group,
 sender/channel, and forward-origin IDs, hands the event to durable processing,
@@ -160,6 +176,20 @@ uv run --frozen ruff check .
 uv run --frozen mypy
 uv run --frozen pytest
 ```
+
+After filling the protected environment, refreshing the instrument/calendar
+caches, and completing operator-attended Telegram authorization, start the
+current observation service with:
+
+```bash
+codexbot-listener --environment /etc/codexbot/codexbot.env
+```
+
+This entrypoint is intentionally TEST-only and exits with `LIVE_EXECUTOR_ABSENT`
+for `CODEXBOT_MODE=LIVE`. It assembles the durable journal, parser, checker,
+official instrument resolver, Telegram listener, feedback intake, and log-group
+reporting. It contains no order submission, modification, or cancellation method.
+The review-only systemd example is in [deploy/README.md](deploy/README.md).
 
 SQLite maintenance commands operate on runtime files outside Git:
 

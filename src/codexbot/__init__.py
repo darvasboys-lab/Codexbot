@@ -1,5 +1,12 @@
 """Safe, deterministic core for Codexbot."""
 
+from codexbot.calendar_cache import (
+    NSE_TRADING_HOLIDAY_URL,
+    CalendarCacheError,
+    NSECalendarCache,
+    NSECalendarSegment,
+    NSECalendarSnapshot,
+)
 from codexbot.checking import SignalChecker
 from codexbot.dhan import (
     DhanAccessToken,
@@ -26,7 +33,12 @@ from codexbot.feedback import (
     OperatorFeedbackService,
     feedback_envelope_from_event,
 )
-from codexbot.health import SystemHealthCoordinator, SystemHealthReport, scheduled_health_time
+from codexbot.health import (
+    SystemHealthCoordinator,
+    SystemHealthReport,
+    calendar_cache_health,
+    scheduled_health_time,
+)
 from codexbot.instrument_cache import (
     DHAN_DETAILED_MASTER_URL,
     DhanInstrumentMasterCache,
@@ -63,7 +75,9 @@ from codexbot.models import (
 )
 from codexbot.parsing import OptionType, ParsedMessage, ParseReason, TelegramMessageParser
 from codexbot.persistence import (
+    AuditEventRecord,
     BrokerSnapshotStatus,
+    CalendarOverrideStatus,
     DailyAuditSummary,
     DuplicateClaimResult,
     EmergencyStopStatus,
@@ -111,11 +125,13 @@ from codexbot.routing import (
     RoutingReason,
     select_delivery_route,
 )
+from codexbot.runtime import RuntimeStartupError, create_test_listener
 from codexbot.session_policy import (
     CalendarSource,
     LocalHolidayCalendar,
     SessionDecision,
     SessionPhase,
+    TradingCalendarCoordinator,
     TradingDayDecision,
     decide_trading_day,
     session_decision,
@@ -155,9 +171,12 @@ from codexbot.telegram import (
 
 __all__ = [
     "Action",
+    "AuditEventRecord",
     "BotSettings",
     "BrokerSnapshotStatus",
     "CalendarSource",
+    "CalendarCacheError",
+    "CalendarOverrideStatus",
     "CapitalRiskEvaluation",
     "CapitalRiskFacts",
     "CapitalRiskPolicy",
@@ -209,6 +228,10 @@ __all__ = [
     "LoadedInstrumentMaster",
     "NormalizedSignal",
     "NetworkTimeoutPolicy",
+    "NSECalendarCache",
+    "NSECalendarSegment",
+    "NSECalendarSnapshot",
+    "NSE_TRADING_HOLIDAY_URL",
     "OptionType",
     "OptionEntryPrice",
     "OperatorFeedback",
@@ -220,6 +243,7 @@ __all__ = [
     "ProcessingResult",
     "PricingError",
     "RuntimeConfiguration",
+    "RuntimeStartupError",
     "RiskEvaluation",
     "RiskLimits",
     "RiskReason",
@@ -247,9 +271,11 @@ __all__ = [
     "TelethonListener",
     "TimeoutAction",
     "TradingDayDecision",
+    "TradingCalendarCoordinator",
     "YahooExchange",
     "YahooFinanceMarketData",
     "configuration_from_mapping",
+    "create_test_listener",
     "decide_trading_day",
     "evaluate_capital_risk",
     "evaluate_entry_risk",
@@ -259,6 +285,7 @@ __all__ = [
     "format_listener_error",
     "format_processing_result",
     "calculate_option_entry_price",
+    "calendar_cache_health",
     "harden_telegram_session",
     "generate_totp",
     "feedback_envelope_from_event",

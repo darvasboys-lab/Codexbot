@@ -54,6 +54,7 @@ def test_test_mode_health_is_audited_without_claiming_live_capability(tmp_path: 
         journal=journal,
         dhan=dhan,
         telegram_health=lambda: telegram,
+        calendar_health=lambda: (True, None),
         execution_mode=ExecutionMode.TEST,
         clock=lambda: NOW,
     )
@@ -96,6 +97,7 @@ def test_component_failure_produces_fixed_non_secret_health_codes(tmp_path: Path
             authorized=True,
             last_error_code="TelegramListenerError",
         ),
+        calendar_health=lambda: (False, "NSE_CALENDAR_CACHE_STALE"),
         execution_mode=ExecutionMode.LIVE,
         clock=lambda: NOW,
     )
@@ -106,4 +108,5 @@ def test_component_failure_produces_fixed_non_secret_health_codes(tmp_path: Path
     assert report.executor_state == "ABSENT_LIVE_BLOCKED"
     assert report.dhan_error_code == "DHAN_HTTP_401"
     assert report.telegram_error_code == "TelegramListenerError"
+    assert report.calendar_error_code == "NSE_CALENDAR_CACHE_STALE"
     assert report.live_entry_capable is False

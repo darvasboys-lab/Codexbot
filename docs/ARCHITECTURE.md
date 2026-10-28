@@ -30,6 +30,11 @@ decision. The checker returns `PASSED_CORE` plus all currently known missing gat
 and can never mark a signal trade-ready. Any later requirement adds a gate; this
 list is never evidence that order submission is authorized.
 
+`codexbot-listener` is the runnable observation composition. It loads the protected
+configuration and fresh validated instrument cache, constructs the journal,
+parser, checker, resolver, Telegram/feedback listener, and reporting, and refuses
+LIVE mode while no executor exists.
+
 ## Component boundaries
 
 - **Telegram adapter:** receives message events, reconnects safely, protects
@@ -84,8 +89,14 @@ list is never evidence that order submission is authorized.
 - **Session/calendar policy:** pure IST phase decisions allow entries only
   09:16-15:10 on proven open days. Dynamic calendar failure remains closed unless
   an authenticated cautionary override follows validated local holiday checks.
+- **NSE calendar cache:** bounded public download, complete CM/FO validation,
+  atomic owner-only activation, explicit freshness, last-known-good preservation,
+  and system-health integration. A coordinator composes cached official data,
+  repository fallback, and append-only dated NSE override state. BSE is absent.
 - **Journal:** SQLite WAL database containing immutable first receipts,
   append-only audit/control facts, and atomic option deduplication decisions.
+  The runtime enforces service-user ownership, a non-symlinked owner-only parent,
+  and owner-only database/WAL/SHM/backup files.
   Emergency stop defaults to engaged and is checked before a duplicate claim.
   Secrets and session material are excluded.
 - **Reporting:** formats deterministic results without raw Telegram text and
@@ -99,6 +110,9 @@ list is never evidence that order submission is authorized.
   service control, emergency stop, and separately confirmed close action over SSH.
   The implemented status shows WAL, emergency stop, latest real-broker snapshot
   counts/time, and absent write executor; richer views remain planned.
+- **Audit operations:** bounded `audit-history`, feedback history, and dated NSE
+  calendar open/clear status are available over local SSH. Every override records
+  the local OS actor and reason and cannot be updated or deleted.
 - **Health coordinator:** composes Telegram, Dhan token/fund, SQLite integrity,
   emergency-stop, mode, and executor state into a redacted audit event. The
   executor is explicitly absent, so LIVE capability is always false. Scheduling

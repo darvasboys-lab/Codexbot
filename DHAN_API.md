@@ -223,7 +223,13 @@ NSE's official holiday endpoint provides segment-specific calendars. The small
 endpoint on 28 October 2026. Dynamic data remains authoritative. When it is
 unavailable, a known weekend/holiday stays closed and any other weekday also stays
 closed until an authenticated manual open override, recorded as cautionary.
-Special-session handling and dynamic cache refresh/expiry remain to be implemented.
+The implemented downloader bounds the response, validates non-empty CM/FO rows,
+dates and a single year before atomic activation, writes mode `0600`, preserves the
+last-known-good file, and rejects stale/future/unsafe/wrong-source cache files.
+A credential-free smoke test on 28 October 2026 returned 20 CM and 20 FO holidays
+for 2026 and reloaded the 688-byte cache successfully. Dated local NSE overrides
+cover verified special sessions and are append-only. Production maximum age,
+refresh frequency, missed runs, and notification retries remain open.
 
 Source: [NSE trading holiday data](https://www.nseindia.com/api/holiday-master?type=trading)
 

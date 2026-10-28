@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 from enum import StrEnum
 from pathlib import Path
 from typing import cast
 from zoneinfo import ZoneInfo
+
+from codexbot.calendar_cache import CalendarCacheError, NSECalendarCache, NSECalendarSegment
+from codexbot.persistence import SQLiteJournal
 
 INDIA = ZoneInfo("Asia/Kolkata")
 
@@ -142,6 +145,41 @@ class LocalHolidayCalendar:
         )
 
 
+@dataclass(frozen=True, slots=True)
+class TradingCalendarCoordinator:
+    """Compose cached official NSE data, local fallback, and durable override."""
+
+    cache: NSECalendarCache
+    journal: SQLiteJournal
+    local_calendar_path: Path
+    maximum_cache_age: timedelta
+
+    def decide(self, day: date, segment: NSECalendarSegment) -> TradingDayDecision:
+        override = self.journal.calendar_override_status(
+            service_date=day,
+            segment=segment.value,
+        )
+        dynamic_market_open: bool | None = None
+        try:
+            dynamic = self.cache.load(maximum_age=self.maximum_cache_age)
+            dynamic_market_open = dynamic.market_open(day, segment)
+        except CalendarCacheError:
+            pass
+        try:
+            local = LocalHolidayCalendar.load(
+                self.local_calendar_path,
+                segment=segment.value,
+            )
+        except (OSError, ValueError):
+            local = None
+        return decide_trading_day(
+            day,
+            dynamic_market_open=dynamic_market_open,
+            local_calendar=local,
+            manual_open_override=override.enabled,
+        )
+
+
 def decide_trading_day(
     day: date,
     *,
@@ -151,6 +189,14 @@ def decide_trading_day(
 ) -> TradingDayDecision:
     """Use dynamic truth when available; otherwise remain closed until override."""
 
+    if manual_open_override:
+        return TradingDayDecision(
+            True,
+            CalendarSource.MANUAL_OVERRIDE,
+            True,
+            False,
+            "MANUAL_OPEN_OVERRIDE",
+        )
     if dynamic_market_open is not None:
         return TradingDayDecision(
             market_open=dynamic_market_open,
@@ -173,20 +219,12 @@ def decide_trading_day(
         return TradingDayDecision(
             False, CalendarSource.LOCAL_FALLBACK, False, False, "LOCAL_HOLIDAY"
         )
-    if not manual_open_override:
-        return TradingDayDecision(
-            False,
-            CalendarSource.LOCAL_FALLBACK,
-            True,
-            True,
-            "DYNAMIC_UNAVAILABLE_OVERRIDE_REQUIRED",
-        )
     return TradingDayDecision(
-        True,
-        CalendarSource.MANUAL_OVERRIDE,
-        True,
         False,
-        "MANUAL_OPEN_WITH_LOCAL_WEEKDAY_CHECK",
+        CalendarSource.LOCAL_FALLBACK,
+        True,
+        True,
+        "DYNAMIC_UNAVAILABLE_OVERRIDE_REQUIRED",
     )
 
 

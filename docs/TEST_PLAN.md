@@ -85,8 +85,17 @@ separately approved live test.
   whole-lot flooring, delivery-only 5% buffer routing, 3s/5s/45s timeout policies,
   cancel/reconcile-before-retry, no market conversion, IST phase boundaries, and
   fail-closed local-calendar/manual-override behavior.
+- Verify official NSE CM/FO response bounds/schema/dates/year, atomic owner-only
+  cache, stale/future/corrupt/unsafe rejection, last-known-good preservation,
+  calendar health, dated append-only override precedence, and terminal audit
+  filtering. Smoke-test the real public endpoint without credentials.
+- Verify the runnable listener composition creates the complete TEST graph and
+  exposes no order methods, while a LIVE configuration fails startup with the
+  fixed `LIVE_EXECUTOR_ABSENT` code.
+- Verify the SQLite directory cannot be a symlink and is owner-only, database and
+  backup files are owner-only, and a database made group/world-readable is refused.
 
-Current result: 238 tests pass. Ruff and strict mypy pass.
+Current result: 259 tests pass. Ruff and strict mypy pass.
 
 ## 2. Remaining parser and reference-rule tests
 

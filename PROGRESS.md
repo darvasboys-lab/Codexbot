@@ -14,17 +14,18 @@ are tracked separately so offline tests cannot be mistaken for deployment proof.
 | --- | --- | --- |
 | Requirements and reference review | Implemented | Approved/open rules separated; archive reviewed without source reuse |
 | Signal authentication, freshness, parser, and checker | Implemented offline | Credentialed Telegram TEST still required |
-| SQLite WAL audit, deduplication, maintenance | Implemented offline | VM backup schedule, retention, and restore drill remain open |
+| SQLite WAL audit, deduplication, maintenance | Implemented offline | Owner/path protections enforced; VM backup schedule, retention, and restore drill remain open |
 | Dhan instrument resolver and atomic cache | Implemented and public-data tested | Production refresh frequency and maximum age required |
 | Yahoo equity and option price calculations | Implemented offline | Equity percentage and Dhan tick-unit conversion required |
 | Quote integrity and anomaly gates | Implemented offline | 3s tick/local, 3% minute, 5% daily, 24h EOD; credentialed feed evidence required |
 | Fixed-fractional sizing and capital risk | Implemented offline | Exact risk/allocation values and sector classification evidence required |
-| Delivery-only routing and session policy | Implemented offline | Executor absent; BSE calendar and failure actions remain open |
+| Delivery routing, NSE calendar, and session policy | Implemented/public-data tested | BSE source and production refresh timing open |
 | Telegram listener and log-group reporting | Implemented offline | Operator-attended session and configured-group TEST required |
 | Authenticated operator feedback and history | Implemented offline | Actual operator/log IDs and credentialed TEST required |
+| Runnable TEST listener service | Implemented offline | Protected values, caches, and operator-attended Telegram TEST required |
 | Dhan authentication and read-only reconciliation | Implemented offline | Dhan credentials and account read-only TEST required |
 | Emergency stop and SSH status | Implemented offline | VM permissions and pending-order cancellation require later executor |
-| 08:00 component health | Implemented as one-shot check | Calendar, missed-run, retry, and notification policy required |
+| 08:00 component health | Implemented with calendar health | Missed-run, retry, and notification policy required |
 | Order execution, fills, protection, retries | Blocked | Trading decisions and current Dhan/regulatory approval required |
 | New GCE TEST deployment | Not started | Infrastructure inputs and explicit deployment approval required |
 | Live order test | Not authorized | Requires completed TEST evidence and separate explicit approval |
@@ -34,7 +35,7 @@ are tracked separately so offline tests cannot be mistaken for deployment proof.
 - Python 3.12 locked environment: passing.
 - Ruff: passing.
 - Strict mypy: passing.
-- Automated tests: 238 passing.
+- Automated tests: 259 passing.
 - GitHub CI: required for every push to `main`.
 - Broker write methods: absent.
 - Paper trading and simulated portfolio state: absent.
@@ -62,7 +63,7 @@ are tracked separately so offline tests cannot be mistaken for deployment proof.
 | D-04 | NSE/BSE selection rule (delivery now; MTF deferred) | Equity instrument selection |
 | D-05 | Retry price/recalculation rule (3s/5s network and 45s fill resolved) | Partial-fill one-retry state machine |
 | D-06 | TEST/LIVE transition and restart backlog (delivery EOD times resolved) | Runtime lifecycle actions |
-| D-07 | BSE/special-session calendar, missed 08:00 run, retry/alert behavior | Automated daily health schedule |
+| D-07 | BSE source, NSE cache age/refresh, missed 08:00 run, retry/alert behavior | Automated daily health schedule |
 | D-08 | AI provider, data policy, eligible rechecks, cost and timeout | Advisory AI layer |
 | D-09 | Groups/source IDs/log, absolute limits, starting-capital source, sector map, risk %, exact 10-15% allocation | Credentialed TEST configuration |
 | D-10 | GCP project, region/zone, budget, backup and logging retention | New VM plan |
@@ -73,12 +74,11 @@ are tracked separately so offline tests cannot be mistaken for deployment proof.
 
 1. Compose quote, sizing, delivery routing, capital, sector, and session gates
    after D-01/D-04/D-05/D-09 are answered; all rejections precede dedup.
-2. Add dynamic NSE calendar cache/validation and terminal override history; keep
-   BSE closed until its official source is verified.
-3. Add audit-derived daily summary delivery and broader terminal audit views.
-4. Add a manual feedback review/export workflow after its approval semantics are
+2. Add production service/runbook templates without deploying; timer activation
+   remains blocked on D-07 and VM creation on D-10.
+3. Add a manual feedback review/export workflow after its approval semantics are
    agreed; storage must never auto-apply a rule or replay a signal.
-5. Prepare the new VM plan after D-10 is supplied; deployment remains a separate
+4. Prepare the new VM plan after D-10 is supplied; deployment remains a separate
    approval step.
 
 ## Update rule

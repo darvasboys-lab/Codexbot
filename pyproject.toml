@@ -17,6 +17,8 @@ dependencies = [
 codexbot-db = "codexbot.db_maintenance:main"
 codexbot-instruments = "codexbot.instrument_maintenance:main"
 codexbot-admin = "codexbot.admin:main"
+codexbot-calendar = "codexbot.calendar_maintenance:main"
+codexbot-listener = "codexbot.runtime:main"
 
 [project.optional-dependencies]
 dev = [

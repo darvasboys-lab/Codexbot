@@ -1,0 +1,29 @@
+[Unit]
+Description=Codexbot TEST Telegram signal observer
+Wants=network-online.target time-sync.target
+After=network-online.target time-sync.target
+
+[Service]
+Type=simple
+User=codexbot
+Group=codexbot
+UMask=0077
+WorkingDirectory=/opt/codexbot
+ExecStart=/opt/codexbot/.venv/bin/codexbot-listener --environment /etc/codexbot/codexbot.env
+Restart=on-failure
+RestartSec=5s
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadWritePaths=/var/lib/codexbot
+
+[Install]
+WantedBy=multi-user.target

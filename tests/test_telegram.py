@@ -66,6 +66,9 @@ def settings(session_path: Path) -> BotSettings:
         database_path=session_path.parent / "codexbot.sqlite3",
         instrument_cache_directory=session_path.parent / "instruments",
         instrument_maximum_age=timedelta(hours=1),
+        calendar_cache_path=session_path.parent / "nse-calendar.json",
+        calendar_maximum_age=timedelta(days=1),
+        local_calendar_path=session_path.parent / "exchange_holidays_2026.json",
         telegram_session_path=session_path,
     )
 
@@ -345,3 +348,33 @@ def test_listener_routes_authenticated_feedback_without_signal_processing(
     assert "Rule change: NONE" in message
     assert "Message replay: NONE" in message
     assert "Broker action: NONE" in message
+
+
+def test_listener_can_deliver_audit_derived_daily_summary(tmp_path: Path) -> None:
+    session_path = private_session(tmp_path)
+    fake_client = FakeClient(authorized=True)
+    fake_client.connected = True
+    journal = SQLiteJournal(tmp_path / "codexbot.sqlite3", clock=lambda: NOW)
+    journal.initialize()
+    journal.append_audit_event(
+        event_type="SIGNAL_RECEIVED",
+        entity_type="signal_receipt",
+        entity_id="1",
+        state="DURABLE",
+        occurred_at=NOW,
+    )
+    listener = TelethonListener(
+        settings=settings(session_path),
+        credentials=TelegramCredentials(api_id=123, api_hash=SecretValue("secret")),
+        processor=cast(SignalProcessor, StubProcessor()),
+        journal=journal,
+        clock=lambda: NOW,
+    )
+    listener._client = cast(Any, fake_client)
+
+    asyncio.run(listener.send_daily_summary(NOW.astimezone().date()))
+
+    message = fake_client.sent_messages[0][1]
+    assert "DAILY SUMMARY" in message
+    assert "Signals received: 1" in message
+    assert "Simulated orders/fills/holdings: NEVER CREATED" in message

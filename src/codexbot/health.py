@@ -5,10 +5,11 @@ from __future__ import annotations
 import sqlite3
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import UTC, date, datetime, time
+from datetime import UTC, date, datetime, time, timedelta
 from typing import Protocol
 from zoneinfo import ZoneInfo
 
+from codexbot.calendar_cache import CalendarCacheError, NSECalendarCache
 from codexbot.dhan import DhanAccessToken, DhanHealthResult
 from codexbot.models import ExecutionMode
 from codexbot.persistence import SQLiteJournal, integrity_check
@@ -34,6 +35,8 @@ class SystemHealthReport:
     dhan_token_expires_at: datetime | None
     journal_healthy: bool
     journal_error_code: str | None
+    calendar_healthy: bool
+    calendar_error_code: str | None
     emergency_stop_engaged: bool
     executor_state: str
     observation_healthy: bool
@@ -49,12 +52,14 @@ class SystemHealthCoordinator:
         journal: SQLiteJournal,
         dhan: DhanHealthProvider,
         telegram_health: Callable[[], TelegramHealth],
+        calendar_health: Callable[[], tuple[bool, str | None]],
         execution_mode: ExecutionMode,
         clock: Callable[[], datetime] | None = None,
     ) -> None:
         self._journal = journal
         self._dhan = dhan
         self._telegram_health = telegram_health
+        self._calendar_health = calendar_health
         self._execution_mode = execution_mode
         self._clock = clock or (lambda: datetime.now(UTC))
 
@@ -65,11 +70,12 @@ class SystemHealthCoordinator:
         telegram = self._telegram_health()
         _, dhan = self._dhan.refresh_and_check()
         journal_healthy, journal_error = self._journal_health()
+        calendar_healthy, calendar_error = self._calendar_health()
         stop = self._journal.emergency_stop_status()
         telegram_ok = (
             telegram.connected and telegram.authorized and telegram.last_error_code is None
         )
-        observation_healthy = telegram_ok and dhan.healthy and journal_healthy
+        observation_healthy = telegram_ok and dhan.healthy and journal_healthy and calendar_healthy
         executor_state = (
             "ABSENT_TEST_MODE"
             if self._execution_mode is ExecutionMode.TEST
@@ -86,6 +92,8 @@ class SystemHealthCoordinator:
             dhan_token_expires_at=dhan.token_expires_at,
             journal_healthy=journal_healthy,
             journal_error_code=journal_error,
+            calendar_healthy=calendar_healthy,
+            calendar_error_code=calendar_error,
             emergency_stop_engaged=stop.engaged,
             executor_state=executor_state,
             observation_healthy=observation_healthy,
@@ -105,6 +113,8 @@ class SystemHealthCoordinator:
                     else None
                 ),
                 "emergency_stop_engaged": report.emergency_stop_engaged,
+                "calendar_error_code": report.calendar_error_code,
+                "calendar_healthy": report.calendar_healthy,
                 "execution_mode": report.execution_mode.value,
                 "executor_state": report.executor_state,
                 "journal_error_code": report.journal_error_code,
@@ -132,6 +142,18 @@ def scheduled_health_time(service_date: date) -> datetime:
     """Return the fixed 08:00 Asia/Kolkata instant for an externally approved day."""
 
     return datetime.combine(service_date, _HEALTH_TIME, tzinfo=_INDIA)
+
+
+def calendar_cache_health(
+    cache: NSECalendarCache, *, maximum_age: timedelta
+) -> tuple[bool, str | None]:
+    """Return only a fixed cache error code; never expose payload or paths."""
+
+    try:
+        cache.load(maximum_age=maximum_age)
+    except CalendarCacheError as error:
+        return False, str(error)
+    return True, None
 
 
 def _aware_utc(value: datetime) -> datetime:

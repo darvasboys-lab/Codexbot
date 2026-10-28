@@ -22,6 +22,9 @@ def valid_values() -> dict[str, str]:
         "CODEXBOT_DATABASE_PATH": "/var/lib/codexbot/codexbot.sqlite3",
         "CODEXBOT_INSTRUMENT_CACHE_DIRECTORY": "/var/lib/codexbot/instruments",
         "CODEXBOT_INSTRUMENT_MAX_AGE_SECONDS": "3600",
+        "CODEXBOT_CALENDAR_CACHE_PATH": "/var/lib/codexbot/nse-calendar.json",
+        "CODEXBOT_CALENDAR_MAX_AGE_SECONDS": "86400",
+        "CODEXBOT_LOCAL_CALENDAR_PATH": "/opt/codexbot/config/exchange_holidays_2026.json",
         "CODEXBOT_MAX_ORDER_AMOUNT": "100000",
         "CODEXBOT_DAILY_LOSS_LIMIT": "5000",
         "CODEXBOT_TOTAL_EXPOSURE_LIMIT": "300000",
@@ -52,6 +55,7 @@ def test_configuration_defaults_only_common_mode_to_test() -> None:
     assert configuration.settings.authorized_source_ids == frozenset({2001, 2002})
     assert configuration.settings.authorized_operator_ids == frozenset({3001})
     assert configuration.settings.instrument_maximum_age.total_seconds() == 3600
+    assert configuration.settings.calendar_maximum_age.total_seconds() == 86400
     assert configuration.settings.risk_limits is not None
     assert str(configuration.settings.risk_limits.maximum_order_amount) == "100000"
     assert configuration.settings.option_sizing is not None

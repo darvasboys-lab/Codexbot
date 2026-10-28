@@ -7,8 +7,10 @@ order-placement capability.
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import sqlite3
+import stat
 import tempfile
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
@@ -35,6 +37,7 @@ _REQUIRED_TABLES = frozenset(
         "broker_trade_observations",
         "broker_position_observations",
         "operator_feedback_events",
+        "calendar_override_events",
     }
 )
 
@@ -113,6 +116,28 @@ class OperatorFeedback:
     status: str
 
 
+@dataclass(frozen=True, slots=True)
+class CalendarOverrideStatus:
+    service_date: date
+    segment: str
+    enabled: bool
+    changed_at: datetime | None
+    reason: str
+    actor: str | None
+    event_id: int | None
+
+
+@dataclass(frozen=True, slots=True)
+class AuditEventRecord:
+    id: int
+    occurred_at: datetime
+    event_type: str
+    entity_type: str
+    entity_id: str | None
+    state: str
+    details_json: str
+
+
 class SQLiteJournal:
     """Single-process SQLite journal configured for WAL operation."""
 
@@ -136,7 +161,7 @@ class SQLiteJournal:
     def initialize(self) -> None:
         """Create the journal schema and enforce WAL mode."""
 
-        self._path.parent.mkdir(parents=True, exist_ok=True)
+        self._prepare_database_location()
         with self._connect() as connection:
             connection.executescript(_SCHEMA)
 
@@ -550,6 +575,123 @@ class SQLiteJournal:
             ).fetchall()
         return tuple(_feedback_from_row(row) for row in rows)
 
+    def calendar_override_status(
+        self, *, service_date: date, segment: str
+    ) -> CalendarOverrideStatus:
+        """Return the latest manual-open state; absence means disabled."""
+
+        normalized_segment = _calendar_segment(segment)
+        with self._connect() as connection:
+            row = connection.execute(
+                """
+                SELECT id, occurred_at, service_date, segment, enabled, reason, actor
+                FROM calendar_override_events
+                WHERE service_date = ? AND segment = ?
+                ORDER BY id DESC
+                LIMIT 1
+                """,
+                (service_date.isoformat(), normalized_segment),
+            ).fetchone()
+        if row is None:
+            return CalendarOverrideStatus(
+                service_date=service_date,
+                segment=normalized_segment,
+                enabled=False,
+                changed_at=None,
+                reason="NO_OVERRIDE_RECORDED",
+                actor=None,
+                event_id=None,
+            )
+        return _calendar_override_from_row(row)
+
+    def set_calendar_override(
+        self,
+        *,
+        service_date: date,
+        segment: str,
+        enabled: bool,
+        reason: str,
+        actor: str,
+    ) -> CalendarOverrideStatus:
+        """Append a dated manual-open or clear event with local actor attribution."""
+
+        normalized_segment = _calendar_segment(segment)
+        normalized_reason = reason.strip()
+        normalized_actor = actor.strip()
+        if not normalized_reason or len(normalized_reason) > 500:
+            raise ValueError("calendar override reason must be 1-500 characters")
+        if not normalized_actor or len(normalized_actor) > 200:
+            raise ValueError("calendar override actor must be 1-200 characters")
+        occurred_at = self._now()
+        with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            cursor = connection.execute(
+                """
+                INSERT INTO calendar_override_events (
+                    occurred_at, service_date, segment, enabled, reason, actor
+                ) VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    _datetime_text(occurred_at),
+                    service_date.isoformat(),
+                    normalized_segment,
+                    int(enabled),
+                    normalized_reason,
+                    normalized_actor,
+                ),
+            )
+            event_id = _last_row_id(cursor)
+            state = "OPEN_ENABLED" if enabled else "CLEARED"
+            self._append_audit_event(
+                connection,
+                event_type="CALENDAR_OVERRIDE_CHANGED",
+                entity_type="calendar_override",
+                entity_id=str(event_id),
+                state=state,
+                details={
+                    "actor": normalized_actor,
+                    "reason": normalized_reason,
+                    "segment": normalized_segment,
+                    "service_date": service_date.isoformat(),
+                },
+                occurred_at=occurred_at,
+            )
+            connection.commit()
+        return CalendarOverrideStatus(
+            service_date=service_date,
+            segment=normalized_segment,
+            enabled=enabled,
+            changed_at=occurred_at,
+            reason=normalized_reason,
+            actor=normalized_actor,
+            event_id=event_id,
+        )
+
+    def recent_audit_events(
+        self, *, limit: int = 50, event_type: str | None = None
+    ) -> tuple[AuditEventRecord, ...]:
+        """Return a bounded newest-first terminal view of immutable audit facts."""
+
+        if limit <= 0 or limit > 500:
+            raise ValueError("audit history limit must be between 1 and 500")
+        normalized_type = event_type.strip() if event_type is not None else None
+        if event_type is not None and not normalized_type:
+            raise ValueError("event_type cannot be blank")
+        query = (
+            "SELECT id, occurred_at, event_type, entity_type, entity_id, state, details_json "
+            "FROM audit_events "
+        )
+        parameters: tuple[object, ...]
+        if normalized_type is None:
+            query += "ORDER BY id DESC LIMIT ?"
+            parameters = (limit,)
+        else:
+            query += "WHERE event_type = ? ORDER BY id DESC LIMIT ?"
+            parameters = (normalized_type, limit)
+        with self._connect() as connection:
+            rows = connection.execute(query, parameters).fetchall()
+        return tuple(_audit_event_from_row(row) for row in rows)
+
     def emergency_stop_status(self) -> EmergencyStopStatus:
         """Return the latest stop state; a new database starts engaged."""
 
@@ -819,7 +961,9 @@ class SQLiteJournal:
         )
 
     def _connect(self) -> sqlite3.Connection:
+        self._validate_database_path_if_present()
         connection = sqlite3.connect(self._path, isolation_level=None)
+        os.chmod(self._path, 0o600)
         connection.row_factory = sqlite3.Row
         connection.execute("PRAGMA foreign_keys = ON")
         connection.execute(f"PRAGMA busy_timeout = {self._busy_timeout_ms}")
@@ -828,7 +972,39 @@ class SQLiteJournal:
             connection.close()
             raise RuntimeError("SQLite database did not enter WAL mode")
         connection.execute("PRAGMA synchronous = NORMAL")
+        self._harden_sidecars()
         return connection
+
+    def _prepare_database_location(self) -> None:
+        parent = self._path.parent
+        if parent.is_symlink():
+            raise PermissionError("SQLite journal directory cannot be a symlink")
+        parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        metadata = parent.stat()
+        if not stat.S_ISDIR(metadata.st_mode) or metadata.st_uid != os.geteuid():
+            raise PermissionError("SQLite journal directory must be owned by the service user")
+        if stat.S_IMODE(metadata.st_mode) & 0o077:
+            raise PermissionError("SQLite journal directory must be owner-only")
+        self._validate_database_path_if_present()
+
+    def _validate_database_path_if_present(self) -> None:
+        if self._path.is_symlink():
+            raise PermissionError("SQLite journal cannot be a symlink")
+        if not self._path.exists():
+            return
+        metadata = self._path.stat()
+        if not stat.S_ISREG(metadata.st_mode) or metadata.st_uid != os.geteuid():
+            raise PermissionError("SQLite journal must be a service-user-owned regular file")
+        if stat.S_IMODE(metadata.st_mode) & 0o077:
+            raise PermissionError("SQLite journal must be owner-only")
+
+    def _harden_sidecars(self) -> None:
+        for suffix in ("-wal", "-shm"):
+            sidecar = Path(f"{self._path}{suffix}")
+            if sidecar.exists():
+                if sidecar.is_symlink() or not sidecar.is_file():
+                    raise PermissionError("SQLite journal sidecar is unsafe")
+                os.chmod(sidecar, 0o600)
 
     def _append_audit_event(
         self,
@@ -888,6 +1064,7 @@ def backup_database(database_path: str | Path, backup_path: str | Path) -> Path:
         sqlite3.connect(destination_path) as destination,
     ):
         source.backup(destination)
+    os.chmod(destination_path, 0o600)
     return destination_path
 
 
@@ -947,6 +1124,37 @@ def _feedback_from_row(row: sqlite3.Row) -> OperatorFeedback:
         received_at=_parse_datetime(str(row["received_at"])),
         status=str(row["status"]),
     )
+
+
+def _calendar_override_from_row(row: sqlite3.Row) -> CalendarOverrideStatus:
+    return CalendarOverrideStatus(
+        service_date=date.fromisoformat(str(row["service_date"])),
+        segment=str(row["segment"]),
+        enabled=bool(row["enabled"]),
+        changed_at=_parse_datetime(str(row["occurred_at"])),
+        reason=str(row["reason"]),
+        actor=str(row["actor"]),
+        event_id=int(row["id"]),
+    )
+
+
+def _audit_event_from_row(row: sqlite3.Row) -> AuditEventRecord:
+    return AuditEventRecord(
+        id=int(row["id"]),
+        occurred_at=_parse_datetime(str(row["occurred_at"])),
+        event_type=str(row["event_type"]),
+        entity_type=str(row["entity_type"]),
+        entity_id=str(row["entity_id"]) if row["entity_id"] is not None else None,
+        state=str(row["state"]),
+        details_json=str(row["details_json"]),
+    )
+
+
+def _calendar_segment(value: str) -> str:
+    normalized = value.strip().upper()
+    if normalized not in {"NSE_CM", "NSE_FO"}:
+        raise ValueError("calendar segment must be NSE_CM or NSE_FO")
+    return normalized
 
 
 def _last_row_id(cursor: sqlite3.Cursor) -> int:
@@ -1046,6 +1254,19 @@ CREATE TABLE IF NOT EXISTS operator_feedback_events (
     status TEXT NOT NULL CHECK (status = 'PENDING_REVIEW'),
     UNIQUE (feedback_group_id, feedback_telegram_message_id)
 );
+
+CREATE TABLE IF NOT EXISTS calendar_override_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    occurred_at TEXT NOT NULL,
+    service_date TEXT NOT NULL CHECK (length(service_date) = 10),
+    segment TEXT NOT NULL CHECK (segment IN ('NSE_CM', 'NSE_FO')),
+    enabled INTEGER NOT NULL CHECK (enabled IN (0, 1)),
+    reason TEXT NOT NULL CHECK (length(reason) BETWEEN 1 AND 500),
+    actor TEXT NOT NULL CHECK (length(actor) BETWEEN 1 AND 200)
+);
+
+CREATE INDEX IF NOT EXISTS calendar_override_date_segment
+ON calendar_override_events (service_date, segment, id);
 
 CREATE INDEX IF NOT EXISTS operator_feedback_receipt_time
 ON operator_feedback_events (signal_receipt_id, received_at, id);
@@ -1188,6 +1409,18 @@ CREATE TRIGGER IF NOT EXISTS operator_feedback_no_delete
 BEFORE DELETE ON operator_feedback_events
 BEGIN
     SELECT RAISE(ABORT, 'operator_feedback_events is append-only');
+END;
+
+CREATE TRIGGER IF NOT EXISTS calendar_override_no_update
+BEFORE UPDATE ON calendar_override_events
+BEGIN
+    SELECT RAISE(ABORT, 'calendar_override_events is append-only');
+END;
+
+CREATE TRIGGER IF NOT EXISTS calendar_override_no_delete
+BEFORE DELETE ON calendar_override_events
+BEGIN
+    SELECT RAISE(ABORT, 'calendar_override_events is append-only');
 END;
 
 CREATE TRIGGER IF NOT EXISTS broker_snapshots_no_update

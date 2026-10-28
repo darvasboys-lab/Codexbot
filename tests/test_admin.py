@@ -183,3 +183,60 @@ def test_admin_feedback_history_shows_pending_review_without_applying_it(
             "status": "PENDING_REVIEW",
         }
     ]
+
+
+def test_admin_calendar_override_open_status_and_clear(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    database = tmp_path / "codexbot.sqlite3"
+    common = [
+        "calendar-override",
+        "--database",
+        str(database),
+        "--date",
+        "2026-11-08",
+        "--segment",
+        "NSE_CM",
+    ]
+
+    assert main([*common, "open", "--reason", "official special session"]) == 0
+    opened = json.loads(capsys.readouterr().out)
+    assert opened["enabled"] is True
+    assert opened["segment"] == "NSE_CM"
+    assert main([*common, "status"]) == 0
+    assert json.loads(capsys.readouterr().out)["enabled"] is True
+    assert main([*common, "clear", "--reason", "session finished"]) == 0
+    assert json.loads(capsys.readouterr().out)["enabled"] is False
+
+
+def test_admin_audit_history_is_bounded_and_structured(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    database = tmp_path / "codexbot.sqlite3"
+    journal = SQLiteJournal(database, clock=lambda: NOW)
+    journal.initialize()
+    journal.append_audit_event(
+        event_type="SYSTEM_TEST",
+        entity_type="system",
+        entity_id=None,
+        state="OK",
+        details={"safe": True},
+    )
+
+    assert (
+        main(
+            [
+                "audit-history",
+                "--database",
+                str(database),
+                "--event-type",
+                "SYSTEM_TEST",
+                "--limit",
+                "1",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert payload[0]["details"] == {"safe": True}
+    assert payload[0]["event_type"] == "SYSTEM_TEST"

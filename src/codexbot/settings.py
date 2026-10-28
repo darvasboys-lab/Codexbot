@@ -66,6 +66,9 @@ class BotSettings:
     database_path: Path
     instrument_cache_directory: Path
     instrument_maximum_age: timedelta
+    calendar_cache_path: Path
+    calendar_maximum_age: timedelta
+    local_calendar_path: Path
     telegram_session_path: Path
     equity_price_percentage: Decimal | None = None
     yahoo_maximum_market_age: timedelta | None = None
@@ -172,6 +175,11 @@ def configuration_from_mapping(values: Mapping[str, str]) -> RuntimeConfiguratio
         instrument_maximum_age=timedelta(
             seconds=_required_positive_int(values, "CODEXBOT_INSTRUMENT_MAX_AGE_SECONDS")
         ),
+        calendar_cache_path=_required_path(values, "CODEXBOT_CALENDAR_CACHE_PATH"),
+        calendar_maximum_age=timedelta(
+            seconds=_required_positive_int(values, "CODEXBOT_CALENDAR_MAX_AGE_SECONDS")
+        ),
+        local_calendar_path=_required_path(values, "CODEXBOT_LOCAL_CALENDAR_PATH"),
         telegram_session_path=_required_path(values, "TELEGRAM_SESSION_PATH"),
         equity_price_percentage=equity_price_percentage,
         yahoo_maximum_market_age=yahoo_maximum_market_age,
@@ -416,6 +424,9 @@ _KNOWN_KEYS = frozenset(
         "CODEXBOT_DATABASE_PATH",
         "CODEXBOT_INSTRUMENT_CACHE_DIRECTORY",
         "CODEXBOT_INSTRUMENT_MAX_AGE_SECONDS",
+        "CODEXBOT_CALENDAR_CACHE_PATH",
+        "CODEXBOT_CALENDAR_MAX_AGE_SECONDS",
+        "CODEXBOT_LOCAL_CALENDAR_PATH",
         "CODEXBOT_EQUITY_PRICE_PERCENTAGE",
         "CODEXBOT_YAHOO_MAX_MARKET_AGE_SECONDS",
         "CODEXBOT_YAHOO_MAX_LOCAL_AGE_SECONDS",

@@ -14,6 +14,8 @@ Status date: 2026-10-28 (Asia/Kolkata)
   basic stock-option gates.
 - SQLite journal in WAL mode with durable idempotent signal receipts, append-only
   audit/receipt/deduplication tables, and atomic 20-second stock-option claims.
+- Enforced service-user ownership and owner-only SQLite directory, database,
+  WAL/SHM sidecar, and backup permissions with symlink/path refusal.
 - Append-only emergency-stop controls that default to engaged, audit actor/reason,
   block candidates before deduplication, and expose local SSH administration.
 - Aggressive stock-option duplicate identity based on canonical underlying only;
@@ -90,10 +92,21 @@ Status date: 2026-10-28 (Asia/Kolkata)
   normal entry, square-off/no-entry, and 15:35 reconciliation/log-rotation phases.
   Calendar fallback is fail-closed with authenticated manual-open override support;
   the official NSE 2026 CM/FO holiday snapshot is stored as a small JSON file.
+- Bounded official NSE holiday downloading and atomic owner-only cache with strict
+  CM/FO schema/date/year/source/freshness validation, last-known-good preservation,
+  CLI maintenance, calendar-aware system health, and a public-data smoke test.
+- Append-only dated NSE manual-open/clear history with local OS actor/reason,
+  special-session precedence, terminal status, and filtered audit views.
+- Callable Telegram delivery for audit-derived daily summaries. Automated timing
+  remains blocked on missed-run/retry notification policy.
 - Structured reason codes and explicit remaining-gate list.
 - Structural safety boundary: the package contains no broker write method, order
   command/intent, simulated fill/holding model, or simulator; `trade_ready` is
   always false. Broker order/trade/position types are read-only observations.
+- Runnable `codexbot-listener` TEST composition that loads protected settings and
+  a fresh validated instrument snapshot, builds the complete observation graph,
+  and refuses `LIVE` with `LIVE_EXECUTOR_ABSENT`. A hardened review-only systemd
+  example and preflight checklist are present but have not been deployed.
 - Automated unit tests for implemented behavior and safety boundaries.
 - Completed reference-archive review with no source reuse; candidate formats,
   conflicts, and rejected legacy behavior are documented.
@@ -119,8 +132,8 @@ Status date: 2026-10-28 (Asia/Kolkata)
   reconciliation; broker observations are durable.
 - Composition of pricing, sizing, sector facts, funds, risk, delivery routing,
   pending-entry cancellation, execution, partial-fill/retry, and protection logic.
-- Dynamic calendar fetching/caching, official BSE/special-session data, missed/late
-  08:00 behavior, health retries, notification, and daily-summary delivery.
+- Official BSE calendar data, production NSE cache age/refresh timing, missed/late
+  08:00 behavior, health retries, and automated notification/summary scheduling.
 - SSH terminal dashboard, Google Cloud Logging, Docker, and new GCE deployment.
 - Any `LIVE` order path or live test.
 

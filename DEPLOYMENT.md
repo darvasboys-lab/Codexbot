@@ -20,6 +20,13 @@ Systemd is the likely supervisor on GCE. Docker and Cloud Logging will be used o
 if they provide a concrete operational benefit after VM and logging costs are
 agreed.
 
+The implemented `codexbot-listener --environment <protected-file>` entrypoint
+assembles the current TEST observation process and refuses `LIVE` because the
+write executor is absent. [deploy/codexbot.service.example](deploy/codexbot.service.example)
+is a hardened review-only systemd template; it has not been copied, enabled, or
+used on a VM. Timer templates are deliberately absent until their unresolved
+ages, missed-run, retry, notification, backup, and retention policies are supplied.
+
 Runtime values will live in one protected environment file readable only by the
 service account. Telegram session files and durable state will live outside the
 Git checkout with restrictive permissions and backups. No credential or session
@@ -58,10 +65,12 @@ failed health check. Failure and holiday semantics remain open.
 The one-shot coordinator and exact 08:00 Asia/Kolkata conversion are implemented.
 It audits component/error codes, token expiry, stop state, and the absent executor
 without recording the token, credentials, account balance, or Telegram content.
-The VM timer must remain disabled until dynamic calendar caching, official BSE and
-special-session data, missed-run, retry, and log-group notification are completed.
-The fail-closed fallback requires an authenticated manual override before opening a
-weekday when the dynamic calendar is unavailable.
+It now includes calendar cache health. VM setup must refresh with
+`codexbot-calendar refresh`, inspect with an explicit maximum age, and retain the
+repository fallback file. The timer remains disabled until official BSE data,
+production cache age/frequency, missed-run, retry, and log-group notification are
+completed. A fail-closed weekday can be opened only through the dated audited
+`codexbot-admin calendar-override` command; BSE cannot be overridden.
 
 Network clients use a 3-second connect and 5-second read policy. The future LIMIT
 executor will use the approved 45-second fill timeout and must reconcile uncertain
@@ -69,7 +78,10 @@ state and confirm cancellation before one retry. No market conversion is allowed
 Systemd timers will represent 08:45 initialization and 15:35 reconciliation only
 after their failure/retry behavior is reviewable.
 
-The runtime database is SQLite in WAL mode. Offline maintenance is exposed as
+The runtime database is SQLite in WAL mode. Its parent directory must be owned by
+the service user at mode `0700`; the runtime refuses symlinked paths or a database
+with group/world permissions and writes database, WAL/SHM, and backup files as
+owner-only. Offline maintenance is exposed as
 `codexbot-db integrity`, `codexbot-db backup`, and `codexbot-db restore-test`.
 Production scheduling, encrypted backup destination, retention, file ownership,
 disk alerts, and recovery objectives will be set in the VM plan.
