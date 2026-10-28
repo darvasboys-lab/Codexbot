@@ -21,6 +21,12 @@ def valid_values() -> dict[str, str]:
         "CODEXBOT_DATABASE_PATH": "/var/lib/codexbot/codexbot.sqlite3",
         "CODEXBOT_INSTRUMENT_CACHE_DIRECTORY": "/var/lib/codexbot/instruments",
         "CODEXBOT_INSTRUMENT_MAX_AGE_SECONDS": "3600",
+        "CODEXBOT_MAX_ORDER_AMOUNT": "100000",
+        "CODEXBOT_MINIMUM_TRADE_FUNDS": "10000",
+        "CODEXBOT_DAILY_LOSS_LIMIT": "5000",
+        "CODEXBOT_TOTAL_EXPOSURE_LIMIT": "300000",
+        "CODEXBOT_MAX_OPEN_POSITIONS": "5",
+        "CODEXBOT_MAX_DAILY_TRADES": "10",
         "TELEGRAM_API_ID": "123456",
         "TELEGRAM_API_HASH": "telegram-secret-hash",
         "TELEGRAM_SESSION_PATH": "/var/lib/codexbot/udit.session",
@@ -43,6 +49,8 @@ def test_configuration_defaults_only_common_mode_to_test() -> None:
     assert configuration.settings.allowed_group_ids == frozenset({-1001, -1002})
     assert configuration.settings.authorized_source_ids == frozenset({2001, 2002})
     assert configuration.settings.instrument_maximum_age.total_seconds() == 3600
+    assert configuration.settings.risk_limits is not None
+    assert str(configuration.settings.risk_limits.maximum_order_amount) == "100000"
     assert configuration.settings.checker_policy().execution_mode is ExecutionMode.TEST
 
 
@@ -76,6 +84,36 @@ def test_active_equity_requires_all_unresolved_setup_price_values() -> None:
     assert configuration.settings.yahoo_maximum_local_age is not None
     assert configuration.settings.yahoo_maximum_market_age.total_seconds() == 5
     assert configuration.settings.yahoo_maximum_local_age.total_seconds() == 2
+
+
+def test_active_segment_requires_all_risk_values() -> None:
+    values = valid_values()
+    for name in (
+        "CODEXBOT_MAX_ORDER_AMOUNT",
+        "CODEXBOT_MINIMUM_TRADE_FUNDS",
+        "CODEXBOT_DAILY_LOSS_LIMIT",
+        "CODEXBOT_TOTAL_EXPOSURE_LIMIT",
+        "CODEXBOT_MAX_OPEN_POSITIONS",
+        "CODEXBOT_MAX_DAILY_TRADES",
+    ):
+        values.pop(name)
+
+    with pytest.raises(SettingsError, match="active segment requires"):
+        configuration_from_mapping(values)
+
+    values["CODEXBOT_FNO_ACTIVE"] = "false"
+    configuration = configuration_from_mapping(values)
+    assert configuration.settings.risk_limits is None
+
+
+def test_partial_risk_settings_fail_even_when_segments_are_inactive() -> None:
+    values = valid_values()
+    values["CODEXBOT_EQUITY_ACTIVE"] = "false"
+    values["CODEXBOT_FNO_ACTIVE"] = "false"
+    values.pop("CODEXBOT_MAX_DAILY_TRADES")
+
+    with pytest.raises(SettingsError, match="supplied together"):
+        configuration_from_mapping(values)
 
 
 def test_credentials_never_appear_in_repr_or_string() -> None:

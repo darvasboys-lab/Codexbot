@@ -62,10 +62,13 @@ separately approved live test.
   backup validation, and appears only as counts/times in local status.
 - Verify 08:00 Asia/Kolkata conversion, redacted component health audit, TEST
   observation health, and explicit false LIVE capability when no executor exists.
+- Verify active segments require all six risk settings, invalid/partial values
+  fail startup, exact hard-cap boundaries, combined breach reasons, and that the
+  unresolved minimum-funds policy prevents authorization even when caps pass.
 - Verify inclusive Yahoo market/local age limits, 2-second future tolerance, INR,
   setup percentage calculation, option 4% ceiling, and floor-to-tick behavior.
 
-Current result: 178 tests pass. Ruff and strict mypy pass.
+Current result: 187 tests pass. Ruff and strict mypy pass.
 
 ## 2. Remaining parser and reference-rule tests
 

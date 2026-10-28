@@ -29,6 +29,9 @@ The loader now enforces service-user ownership, regular-file type, no symlink,
 and mode `0600` or stricter. [.env.example](.env.example) documents required names
 without values. VM setup must create the populated file outside the checkout and
 must never pass PIN/TOTP/session credentials as command-line arguments.
+Any active segment also requires six explicit positive risk settings; startup
+fails if the set is missing or partial. Deployment templates must not invent
+values for these operator decisions.
 
 Telegram authorization must occur in a separate operator-attended setup step.
 The unattended service refuses a missing or unauthorized session. The session

@@ -60,6 +60,9 @@ Status date: 2026-10-28 (Asia/Kolkata)
 - Secret-free system health composition for Telegram, Dhan token/funds, SQLite
   integrity, emergency-stop state, and absent executor; fixed 08:00
   Asia/Kolkata schedule calculation and append-only health audit.
+- Mandatory typed setup for all six requested risk limits whenever a segment is
+  active, plus pure hard-cap evaluation for order value, daily loss, exposure,
+  open positions, and daily trades. Minimum-funds semantics remain a blocker.
 - Structured reason codes and explicit remaining-gate list.
 - Structural safety boundary: the package contains no broker write method, order
   model, fill model, holdings model, or simulator; `trade_ready` is always false.

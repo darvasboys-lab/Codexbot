@@ -98,6 +98,10 @@ answer. Code must not turn an open decision into an implicit default.
   over-exits and reconcile state on restart.
 - Risk setup includes maximum order amount, minimum trade funds, daily loss,
   total exposure, open positions, and daily trade count.
+- All six risk settings are mandatory and positive when either segment is active;
+  none has a production default. The five clear hard caps are implemented as a
+  pure evaluator. It cannot authorize entry while minimum-funds semantics remain
+  unresolved.
 - Emergency stop blocks new entries, cancels pending entries, continues managing
   filled positions, and exposes a separate explicit close action.
 - The durable emergency-stop entry gate fails closed on a new database. Only an
@@ -134,7 +138,8 @@ answer. Code must not turn an open decision into an implicit default.
    to the calculation.
 4. **Sizing priority:** choose fixed shares/lots versus budget when both are
    configured; decide whether insufficient funds always rejects or may reduce
-   quantity; define the role of minimum-trade-funds.
+   quantity; define whether minimum-trade-funds is checked before an entry or
+   retained after it. This open policy is an explicit risk-evaluation blocker.
 5. **Equity product:** choose delivery or MTF and define Dhan MTF
    eligibility/margin checks after broker support is verified.
 6. **Futures:** confirm whether stock futures are in scope. “OK” is not treated as

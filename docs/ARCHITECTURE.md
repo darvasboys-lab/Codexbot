@@ -65,6 +65,9 @@ list is never evidence that order submission is authorized.
   cannot itself authorize a retry or exit. A completed combined view is then
   persisted atomically in append-only observation tables. Margin remains planned.
 - **Risk engine:** configured caps and portfolio-aware entry authorization.
+  The implemented pure layer applies order-value, daily-loss, exposure,
+  open-position, and daily-trade caps. It always reports the unresolved
+  minimum-funds policy and cannot authorize entry.
 - **Execution/reconciliation:** LIVE-only order intents, duplicate-submission
   controls, state reconciliation, bounded partial-fill retry, and protection
   exits. Dhan correlation IDs are not assumed to provide idempotency.
@@ -94,7 +97,8 @@ file, and mode `0600` or stricter. It accepts only documented keys and performs 
 shell expansion. TEST is the sole default; both segment flags, source identities,
 paths, instrument age, Telegram credentials/session path, and Dhan TOTP inputs are
 explicit. Active equity also requires both Yahoo age limits and the percentage
-above market. Secret value objects render only `<redacted>` and require an explicit
+above market. Any active segment requires all six positive risk values. Secret
+value objects render only `<redacted>` and require an explicit
 adapter call to reveal their value.
 
 ## Telegram session boundary

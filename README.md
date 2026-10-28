@@ -92,6 +92,12 @@ percentage above market and both Yahoo age limits. Secret representations are re
 See [.env.example](.env.example); keep the populated file outside Git with mode
 `0600`.
 
+Whenever equity or F&O is active, setup also requires all six risk values:
+maximum order amount, minimum trade funds, daily loss, total exposure, open
+positions, and daily trades. A pure risk evaluator applies the five unambiguous
+hard caps. It always leaves entry blocked on the minimum-funds policy because its
+meaning and reduce-versus-reject behavior are still unanswered.
+
 The Telegram adapter uses one Telethon user session and registers only
 `NewMessage` for configured groups. It extracts Telegram's marked group,
 sender/channel, and forward-origin IDs, hands the event to durable processing,

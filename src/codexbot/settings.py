@@ -12,6 +12,7 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 from codexbot.models import CheckerPolicy, ExecutionMode
+from codexbot.risk import RiskLimits
 
 
 class SettingsError(ValueError):
@@ -67,6 +68,7 @@ class BotSettings:
     equity_price_percentage: Decimal | None = None
     yahoo_maximum_market_age: timedelta | None = None
     yahoo_maximum_local_age: timedelta | None = None
+    risk_limits: RiskLimits | None = None
 
     def checker_policy(self) -> CheckerPolicy:
         return CheckerPolicy(
@@ -126,10 +128,16 @@ def configuration_from_mapping(values: Mapping[str, str]) -> RuntimeConfiguratio
             "active equity requires price percentage and both Yahoo quote age limits"
         )
 
+    fno_active = _required_bool(values, "CODEXBOT_FNO_ACTIVE")
+    segment_active = equity_active or fno_active
+    risk_limits = _optional_risk_limits(values)
+    if segment_active and risk_limits is None:
+        raise SettingsError("an active segment requires all six risk limit settings")
+
     settings = BotSettings(
         mode=mode,
         equity_active=equity_active,
-        fno_active=_required_bool(values, "CODEXBOT_FNO_ACTIVE"),
+        fno_active=fno_active,
         allowed_group_ids=_required_id_set(values, "CODEXBOT_GROUP_IDS"),
         authorized_source_ids=_required_id_set(values, "CODEXBOT_AUTHORIZED_SOURCE_IDS"),
         log_group_id=_required_nonzero_int(values, "CODEXBOT_LOG_GROUP_ID"),
@@ -142,6 +150,7 @@ def configuration_from_mapping(values: Mapping[str, str]) -> RuntimeConfiguratio
         equity_price_percentage=equity_price_percentage,
         yahoo_maximum_market_age=yahoo_maximum_market_age,
         yahoo_maximum_local_age=yahoo_maximum_local_age,
+        risk_limits=risk_limits,
     )
     telegram = TelegramCredentials(
         api_id=_required_positive_int(values, "TELEGRAM_API_ID"),
@@ -289,6 +298,41 @@ def _optional_positive_duration(values: Mapping[str, str], name: str) -> timedel
     return timedelta(seconds=seconds)
 
 
+def _optional_risk_limits(values: Mapping[str, str]) -> RiskLimits | None:
+    names = (
+        "CODEXBOT_MAX_ORDER_AMOUNT",
+        "CODEXBOT_MINIMUM_TRADE_FUNDS",
+        "CODEXBOT_DAILY_LOSS_LIMIT",
+        "CODEXBOT_TOTAL_EXPOSURE_LIMIT",
+        "CODEXBOT_MAX_OPEN_POSITIONS",
+        "CODEXBOT_MAX_DAILY_TRADES",
+    )
+    supplied = [bool(values.get(name, "").strip()) for name in names]
+    if not any(supplied):
+        return None
+    if not all(supplied):
+        raise SettingsError("risk limit settings must be supplied together")
+    return RiskLimits(
+        maximum_order_amount=_required_positive_decimal(values, names[0]),
+        minimum_trade_funds=_required_positive_decimal(values, names[1]),
+        daily_loss_limit=_required_positive_decimal(values, names[2]),
+        total_exposure_limit=_required_positive_decimal(values, names[3]),
+        maximum_open_positions=_required_positive_int(values, names[4]),
+        maximum_daily_trades=_required_positive_int(values, names[5]),
+    )
+
+
+def _required_positive_decimal(values: Mapping[str, str], name: str) -> Decimal:
+    text = _required(values, name)
+    try:
+        value = Decimal(text)
+    except InvalidOperation as error:
+        raise SettingsError(f"{name} must be a decimal") from error
+    if not value.is_finite() or value <= 0:
+        raise SettingsError(f"{name} must be finite and positive")
+    return value
+
+
 _ENV_LINE = re.compile(r"(?:export\s+)?(?P<name>[A-Za-z_][A-Za-z0-9_]*)=(?P<value>.*)")
 _KNOWN_KEYS = frozenset(
     {
@@ -304,6 +348,12 @@ _KNOWN_KEYS = frozenset(
         "CODEXBOT_EQUITY_PRICE_PERCENTAGE",
         "CODEXBOT_YAHOO_MAX_MARKET_AGE_SECONDS",
         "CODEXBOT_YAHOO_MAX_LOCAL_AGE_SECONDS",
+        "CODEXBOT_MAX_ORDER_AMOUNT",
+        "CODEXBOT_MINIMUM_TRADE_FUNDS",
+        "CODEXBOT_DAILY_LOSS_LIMIT",
+        "CODEXBOT_TOTAL_EXPOSURE_LIMIT",
+        "CODEXBOT_MAX_OPEN_POSITIONS",
+        "CODEXBOT_MAX_DAILY_TRADES",
         "TELEGRAM_API_ID",
         "TELEGRAM_API_HASH",
         "TELEGRAM_PHONE_NUMBER",

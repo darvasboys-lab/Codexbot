@@ -71,6 +71,13 @@ from codexbot.processing import (
     SignalProcessor,
     TelegramEnvelope,
 )
+from codexbot.risk import (
+    EntryRiskFacts,
+    RiskEvaluation,
+    RiskLimits,
+    RiskReason,
+    evaluate_entry_risk,
+)
 from codexbot.settings import (
     BotSettings,
     DhanCredentials,
@@ -115,6 +122,7 @@ __all__ = [
     "DownloadEvidence",
     "DuplicateClaimResult",
     "EmergencyStopStatus",
+    "EntryRiskFacts",
     "ExecutionMode",
     "EquityQuote",
     "EquityEntryReference",
@@ -139,6 +147,9 @@ __all__ = [
     "ProcessingResult",
     "PricingError",
     "RuntimeConfiguration",
+    "RiskEvaluation",
+    "RiskLimits",
+    "RiskReason",
     "Segment",
     "SecretValue",
     "SignalChecker",
@@ -157,6 +168,7 @@ __all__ = [
     "YahooExchange",
     "YahooFinanceMarketData",
     "configuration_from_mapping",
+    "evaluate_entry_risk",
     "calculate_option_entry_price",
     "harden_telegram_session",
     "generate_totp",
