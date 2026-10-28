@@ -51,7 +51,9 @@ separately approved live test.
   sidecar hardening, unauthorized-session refusal, authorized lifecycle cleanup,
   and NewMessage-only registration with a fake client.
 
-Current PR: 130 tests pass (128 baseline plus two replay-safety regressions); Ruff and strict mypy pass in GitHub Actions. See PR #1 CI checks.
+Current stacked PR: 137 tests (128 baseline, two replay-safety regressions,
+and seven read-only restart-audit tests). Ruff, strict mypy, and pytest passed
+in GitHub Actions for PR #2 (run 40614132265).
 
 ## 2. Remaining parser and reference-rule tests
 
@@ -64,7 +66,10 @@ prove it cannot silently become a BUY.
 ## 3. Remaining durable journal and restart tests
 
 - verify event ordering under sustained concurrent group arrivals;
-- restart the process and recover every incomplete state without creating orders;
+- inspect unfinished durable receipts after a restart without creating orders,
+  replaying signals, or mutating the journal (offline diagnostic implemented);
+- reconcile every incomplete broker/order state after a restart without creating
+  duplicate orders (not implemented);
 - test production file ownership, disk-full behavior, scheduled encrypted backup,
   and recovery timing; offline integrity, backup, and restore tests are implemented;
 - verify logs and database records redact credentials/session data; and
