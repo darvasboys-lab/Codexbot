@@ -51,6 +51,9 @@ Runtime values will live in one protected environment file readable only by the
 service account. Telegram session files and durable state will live outside the
 Git checkout with restrictive permissions and backups. No credential or session
 belongs in an image, repository, command history, or log.
+Signal intake is group-only under the revised policy; sender and forward metadata
+remain in audit records. Blank operator IDs disable administrative feedback rather
+than authorizing log-group members.
 
 The loader now enforces service-user ownership, regular-file type, no symlink,
 and mode `0600` or stricter. [.env.example](.env.example) documents required names

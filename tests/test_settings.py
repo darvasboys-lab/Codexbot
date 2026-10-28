@@ -25,6 +25,7 @@ def valid_values() -> dict[str, str]:
         "CODEXBOT_CALENDAR_CACHE_PATH": "/var/lib/codexbot/nse-calendar.json",
         "CODEXBOT_CALENDAR_MAX_AGE_SECONDS": "86400",
         "CODEXBOT_LOCAL_CALENDAR_PATH": "/opt/codexbot/config/exchange_holidays_2026.json",
+        "CODEXBOT_STARTING_CAPITAL": "20000",
         "CODEXBOT_MAX_ORDER_AMOUNT": "100000",
         "CODEXBOT_DAILY_LOSS_LIMIT": "5000",
         "CODEXBOT_TOTAL_EXPOSURE_LIMIT": "300000",
@@ -57,10 +58,22 @@ def test_configuration_defaults_only_common_mode_to_test() -> None:
     assert configuration.settings.instrument_maximum_age.total_seconds() == 3600
     assert configuration.settings.calendar_maximum_age.total_seconds() == 86400
     assert configuration.settings.risk_limits is not None
+    assert str(configuration.settings.starting_capital) == "20000"
     assert str(configuration.settings.risk_limits.maximum_order_amount) == "100000"
     assert configuration.settings.option_sizing is not None
     assert configuration.settings.option_sizing.mode.value == "BUDGET"
     assert configuration.settings.checker_policy().execution_mode is ExecutionMode.TEST
+
+
+def test_signal_sources_and_feedback_operators_may_be_empty() -> None:
+    values = valid_values()
+    values["CODEXBOT_AUTHORIZED_SOURCE_IDS"] = ""
+    values["CODEXBOT_OPERATOR_IDS"] = ""
+
+    configuration = configuration_from_mapping(values)
+
+    assert configuration.settings.authorized_source_ids == frozenset()
+    assert configuration.settings.authorized_operator_ids == frozenset()
 
 
 def test_explicit_live_mode_does_not_create_an_execution_capability() -> None:
@@ -132,6 +145,14 @@ def test_active_segment_requires_all_risk_values() -> None:
     values["CODEXBOT_FNO_ACTIVE"] = "false"
     configuration = configuration_from_mapping(values)
     assert configuration.settings.risk_limits is None
+
+
+def test_active_segment_requires_starting_capital() -> None:
+    values = valid_values()
+    values.pop("CODEXBOT_STARTING_CAPITAL")
+
+    with pytest.raises(SettingsError, match="STARTING_CAPITAL"):
+        configuration_from_mapping(values)
 
 
 def test_partial_risk_settings_fail_even_when_segments_are_inactive() -> None:

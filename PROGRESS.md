@@ -13,7 +13,7 @@ are tracked separately so offline tests cannot be mistaken for deployment proof.
 | Milestone | State | Evidence or next gate |
 | --- | --- | --- |
 | Requirements and reference review | Implemented | Approved/open rules separated; archive reviewed without source reuse |
-| Signal authentication, freshness, parser, and checker | Implemented offline | Credentialed Telegram TEST still required |
+| Group-only signal authentication, freshness, parser, and checker | Implemented offline | Credentialed Telegram TEST still required |
 | SQLite WAL audit, deduplication, maintenance | Implemented offline | Owner/path protections enforced; VM backup schedule, retention, and restore drill remain open |
 | Dhan instrument resolver and atomic cache | Implemented and public-data tested | Production refresh frequency and maximum age required |
 | Yahoo equity and option price calculations | Implemented offline | Equity percentage and Dhan tick-unit conversion required |
@@ -35,7 +35,7 @@ are tracked separately so offline tests cannot be mistaken for deployment proof.
 - Python 3.12 locked environment: passing.
 - Ruff: passing.
 - Strict mypy: passing.
-- Automated tests: 261 passing.
+- Automated tests: 263 passing.
 - GitHub CI: required for every push to `main`.
 - Broker write methods: absent.
 - Paper trading and simulated portfolio state: absent.
@@ -65,7 +65,7 @@ are tracked separately so offline tests cannot be mistaken for deployment proof.
 | D-06 | TEST/LIVE transition and restart backlog (delivery EOD times resolved) | Runtime lifecycle actions |
 | D-07 | BSE source, NSE cache age/refresh, missed 08:00 run, retry/alert behavior | Automated daily health schedule |
 | D-08 | AI provider, data policy, eligible rechecks, cost and timeout | Advisory AI layer |
-| D-09 | Groups/source IDs/log, absolute limits, starting-capital source, sector map, risk %, exact 10-15% allocation | Credentialed TEST configuration |
+| D-09 | Groups/log, capital and numeric limits resolved; sector map and optional feedback operator IDs remain | Credentialed TEST configuration |
 | D-10 | Project/VM/zone resolved; supply authorized GCP/SSH connection, backup destination/cost and test-record retention semantics | Existing auditbot deployment |
 | D-11 | Redacted equity BUY/SELL and more malformed examples | Remaining parser coverage |
 | D-12 | Dhan confirmation for post-April-2026 client algo/static-IP/hosting rules | Any LIVE executor implementation |

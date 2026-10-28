@@ -113,8 +113,6 @@ class CheckerPolicy:
     def __post_init__(self) -> None:
         if not self.allowed_group_ids:
             raise ValueError("at least one allowed group ID is required")
-        if not self.authorized_source_ids:
-            raise ValueError("at least one authorized source ID is required")
 
 
 @dataclass(frozen=True, slots=True)

@@ -70,6 +70,7 @@ class BotSettings:
     calendar_maximum_age: timedelta
     local_calendar_path: Path
     telegram_session_path: Path
+    starting_capital: Decimal | None = None
     equity_price_percentage: Decimal | None = None
     yahoo_maximum_market_age: timedelta | None = None
     yahoo_maximum_local_age: timedelta | None = None
@@ -146,6 +147,9 @@ def configuration_from_mapping(values: Mapping[str, str]) -> RuntimeConfiguratio
 
     fno_active = _required_bool(values, "CODEXBOT_FNO_ACTIVE")
     segment_active = equity_active or fno_active
+    starting_capital = _optional_positive_decimal(values, "CODEXBOT_STARTING_CAPITAL")
+    if segment_active and starting_capital is None:
+        raise SettingsError("an active segment requires CODEXBOT_STARTING_CAPITAL")
     risk_limits = _optional_risk_limits(values)
     if segment_active and risk_limits is None:
         raise SettingsError("an active segment requires all five absolute risk limit settings")
@@ -167,8 +171,8 @@ def configuration_from_mapping(values: Mapping[str, str]) -> RuntimeConfiguratio
         equity_active=equity_active,
         fno_active=fno_active,
         allowed_group_ids=allowed_group_ids,
-        authorized_source_ids=_required_id_set(values, "CODEXBOT_AUTHORIZED_SOURCE_IDS"),
-        authorized_operator_ids=_required_id_set(values, "CODEXBOT_OPERATOR_IDS"),
+        authorized_source_ids=_optional_id_set(values, "CODEXBOT_AUTHORIZED_SOURCE_IDS"),
+        authorized_operator_ids=_optional_id_set(values, "CODEXBOT_OPERATOR_IDS"),
         log_group_id=log_group_id,
         database_path=_required_path(values, "CODEXBOT_DATABASE_PATH"),
         instrument_cache_directory=_required_path(values, "CODEXBOT_INSTRUMENT_CACHE_DIRECTORY"),
@@ -181,6 +185,7 @@ def configuration_from_mapping(values: Mapping[str, str]) -> RuntimeConfiguratio
         ),
         local_calendar_path=_required_path(values, "CODEXBOT_LOCAL_CALENDAR_PATH"),
         telegram_session_path=_required_path(values, "TELEGRAM_SESSION_PATH"),
+        starting_capital=starting_capital,
         equity_price_percentage=equity_price_percentage,
         yahoo_maximum_market_age=yahoo_maximum_market_age,
         yahoo_maximum_local_age=yahoo_maximum_local_age,
@@ -304,6 +309,12 @@ def _required_id_set(values: Mapping[str, str], name: str) -> frozenset[int]:
     return result
 
 
+def _optional_id_set(values: Mapping[str, str], name: str) -> frozenset[int]:
+    if not values.get(name, "").strip():
+        return frozenset()
+    return _required_id_set(values, name)
+
+
 def _required_path(values: Mapping[str, str], name: str) -> Path:
     return Path(_required(values, name)).expanduser()
 
@@ -324,6 +335,12 @@ def _optional_nonnegative_decimal(values: Mapping[str, str], name: str) -> Decim
     if not value.is_finite() or value < 0:
         raise SettingsError(f"{name} must be finite and non-negative")
     return value
+
+
+def _optional_positive_decimal(values: Mapping[str, str], name: str) -> Decimal | None:
+    if not values.get(name, "").strip():
+        return None
+    return _required_positive_decimal(values, name)
 
 
 def _optional_positive_duration(values: Mapping[str, str], name: str) -> timedelta | None:
@@ -427,6 +444,7 @@ _KNOWN_KEYS = frozenset(
         "CODEXBOT_CALENDAR_CACHE_PATH",
         "CODEXBOT_CALENDAR_MAX_AGE_SECONDS",
         "CODEXBOT_LOCAL_CALENDAR_PATH",
+        "CODEXBOT_STARTING_CAPITAL",
         "CODEXBOT_EQUITY_PRICE_PERCENTAGE",
         "CODEXBOT_YAHOO_MAX_MARKET_AGE_SECONDS",
         "CODEXBOT_YAHOO_MAX_LOCAL_AGE_SECONDS",

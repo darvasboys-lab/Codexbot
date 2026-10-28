@@ -25,8 +25,8 @@ answer. Code must not turn an open decision into an implicit default.
   configured groups; it does not register edit/delete handlers. Require an
   existing authorized session rather than prompting for OTP/password during
   unattended startup. Protect the session directory and session/journal/WAL/SHM
-  files with owner-only permissions. Preserve marked Telegram IDs and hidden
-  forwarded origins so deterministic source checks can fail closed.
+  files with owner-only permissions. Preserve marked Telegram IDs and forwarded
+  origins for audit even though signal authorization is group-only.
 - Process only `BUY` initially. Classify and log `SELL`/`EXIT` without execution.
   Ignore edits/deletions after processing.
 - Recognize the supplied compact stock-option form
@@ -42,9 +42,9 @@ answer. Code must not turn an open decision into an implicit default.
   actionable text caption as non-actionable. A compact option-shaped index
   message may be parsed, but canonical instrument facts must reject it as an
   index; symbol-name guessing is not authoritative.
-- Require both a configured group ID and an authorized sender/channel ID.
-  Forwarded messages also require an explicitly authorized original-source ID;
-  hidden or unauthorized origins are rejected.
+- Require a configured signal-group ID. Every sender and forwarded origin inside
+  the three configured signal groups may enter deterministic parsing and
+  validation; sender identity remains audit metadata. Reject every other group.
 - Measure the inclusive 60-second age limit at the first durable receipt and
   allow exactly 2 seconds of future clock skew.
 - For stock options, use a 20-second cross-group duplicate window anchored to
@@ -121,6 +121,11 @@ answer. Code must not turn an open decision into an implicit default.
   only 95% of currently available funds as spendable. Insufficient cash rejects;
   quantity is not silently reduced. Authorization requires current account and
   sector data; there is no separate ambiguous minimum-funds setting.
+- TEST setup activates both equity and F&O with starting capital INR 20,000,
+  maximum order INR 20,000, total exposure INR 20,000, at most two open
+  positions and two daily trades, fixed option sizing of one lot, 3% equity
+  limit uplift, 1% risk per trade, and a 10% allocation cap. The absolute daily
+  loss limit is INR 400 from the approved 2% rule.
 - Emergency stop blocks new entries, cancels pending entries, continues managing
   filled positions, and exposes a separate explicit close action.
 - The durable emergency-stop entry gate fails closed on a new database. Only an

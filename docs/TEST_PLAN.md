@@ -8,8 +8,8 @@ separately approved live test.
 
 - Type-check and lint all code.
 - Verify `TEST` default and the single common mode model.
-- Verify both configured group and authorized sender/channel IDs, forwarded
-  origin authorization, the inclusive 60-second durable-receipt age boundary,
+- Verify configured-group authorization for every sender and forwarded origin,
+  audit identity retention, the inclusive 60-second durable-receipt age boundary,
   and the fixed 2-second future-clock tolerance.
 - Verify `SELL`, `EXIT`, and chatter cannot pass the BUY pipeline.
 - Verify independent equity/F&O active flags.
@@ -98,7 +98,7 @@ separately approved live test.
   it refuses mismatched project, instance, zone, and OS metadata. Validate systemd
   units before installation and confirm no new listening socket appears afterward.
 
-Current result: 261 tests pass. Ruff and strict mypy pass.
+Current result: 263 tests pass. Ruff and strict mypy pass.
 
 ## 2. Remaining parser and reference-rule tests
 
@@ -122,8 +122,8 @@ prove it cannot silently become a BUY.
 
 With Udit present and credentials supplied through the protected runtime setup:
 
-- authenticate one Telegram account and verify only configured group/sender
-  identities;
+- authenticate one Telegram account and verify only configured groups enter
+  checking while every sender in those groups is accepted;
 - send the approved equity, option, SELL, EXIT, chatter, duplicate, stale, and
   malformed examples;
 - disconnect/reconnect and restart to test session protection and backlog policy;

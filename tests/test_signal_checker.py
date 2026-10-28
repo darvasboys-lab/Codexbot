@@ -163,46 +163,35 @@ def test_unknown_message_is_filtered() -> None:
     assert report.reasons == (ReasonCode.UNRECOGNIZED_MESSAGE,)
 
 
-@pytest.mark.parametrize(
-    ("group_id", "source_id", "reason"),
-    [
-        (9999, 2001, ReasonCode.SOURCE_NOT_CONFIGURED),
-        (1001, 9998, ReasonCode.SOURCE_IDENTITY_UNAUTHORIZED),
-        (1001, None, ReasonCode.SOURCE_IDENTITY_UNAUTHORIZED),
-    ],
-)
-def test_both_group_and_source_identity_are_required(
-    group_id: int, source_id: int | None, reason: ReasonCode
-) -> None:
-    candidate = signal(group_id=group_id, source_id=source_id)
+def test_group_allowlist_is_required() -> None:
+    candidate = signal(group_id=9999)
 
     report = SignalChecker(policy()).check(candidate, LISTED_EQUITY)
 
     assert report.disposition is CheckDisposition.REJECTED
-    assert reason in report.reasons
+    assert ReasonCode.SOURCE_NOT_CONFIGURED in report.reasons
 
 
-@pytest.mark.parametrize("forwarded_from_source_id", [None, 9998])
-def test_forwarded_signal_requires_authorized_origin(
-    forwarded_from_source_id: int | None,
-) -> None:
-    candidate = signal(
-        is_forwarded=True,
-        forwarded_from_source_id=forwarded_from_source_id,
-    )
-
-    report = SignalChecker(policy()).check(candidate, LISTED_EQUITY)
-
-    assert report.disposition is CheckDisposition.REJECTED
-    assert ReasonCode.FORWARDED_SOURCE_UNAUTHORIZED in report.reasons
-
-
-def test_forwarded_signal_with_authorized_sender_and_origin_can_continue() -> None:
-    candidate = signal(is_forwarded=True, forwarded_from_source_id=2002)
+@pytest.mark.parametrize("source_id", [None, 2001, 9998])
+def test_any_sender_in_configured_group_can_continue(source_id: int | None) -> None:
+    candidate = signal(source_id=source_id)
 
     report = SignalChecker(policy()).check(candidate, LISTED_EQUITY)
 
     assert report.disposition is CheckDisposition.PASSED_CORE
+    assert ReasonCode.SOURCE_IDENTITY_UNAUTHORIZED not in report.reasons
+
+
+@pytest.mark.parametrize("forwarded_from_source_id", [None, 2002, 9998])
+def test_forwarded_signal_in_configured_group_can_continue(
+    forwarded_from_source_id: int | None,
+) -> None:
+    candidate = signal(is_forwarded=True, forwarded_from_source_id=forwarded_from_source_id)
+
+    report = SignalChecker(policy()).check(candidate, LISTED_EQUITY)
+
+    assert report.disposition is CheckDisposition.PASSED_CORE
+    assert ReasonCode.FORWARDED_SOURCE_UNAUTHORIZED not in report.reasons
 
 
 @pytest.mark.parametrize(
@@ -400,20 +389,11 @@ def test_stock_option_can_pass_only_the_implemented_core_checks() -> None:
     assert report.trade_ready is False
 
 
-@pytest.mark.parametrize(
-    ("groups", "sources", "message"),
-    [
-        (frozenset(), frozenset({2001}), "allowed group"),
-        (frozenset({1001}), frozenset(), "authorized source"),
-    ],
-)
-def test_source_policy_sets_cannot_be_empty(
-    groups: frozenset[int], sources: frozenset[int], message: str
-) -> None:
-    with pytest.raises(ValueError, match=message):
+def test_source_policy_requires_at_least_one_group() -> None:
+    with pytest.raises(ValueError, match="allowed group"):
         CheckerPolicy(
-            allowed_group_ids=groups,
-            authorized_source_ids=sources,
+            allowed_group_ids=frozenset(),
+            authorized_source_ids=frozenset(),
             equity_active=True,
             fno_active=True,
         )

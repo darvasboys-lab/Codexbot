@@ -38,7 +38,7 @@ LIVE mode while no executor exists.
 ## Component boundaries
 
 - **Telegram adapter:** receives message events, reconnects safely, protects
-  session state, provides group/sender/channel/forward metadata, and applies the
+  session state, provides group/sender/channel/forward audit metadata, and applies the
   approved restart/backlog policy once Udit chooses it. The service registers
   only `NewMessage`, uses finite reconnect attempts, and refuses interactive
   authorization at startup. Its default result path sends a plain-text,
@@ -127,9 +127,10 @@ LIVE mode while no executor exists.
 One protected environment file supplies the single-instance runtime settings and
 credentials. The loader requires service-user ownership, a regular non-symlink
 file, and mode `0600` or stricter. It accepts only documented keys and performs no
-shell expansion. TEST is the sole default; both segment flags, source identities,
-paths, instrument age, operator IDs, Telegram credentials/session path, and Dhan TOTP inputs are
-explicit. Active equity also requires Yahoo ages no greater than 3 seconds, the
+shell expansion. TEST is the sole default; both segment flags, signal groups,
+paths, instrument age, Telegram credentials/session path, and Dhan TOTP inputs are
+explicit. Operator IDs are optional and blank disables feedback. Active equity
+also requires Yahoo ages no greater than 3 seconds, the
 percentage above market, and fixed-fractional values. Any active segment requires
 all five positive absolute risk values. Secret
 value objects render only `<redacted>` and require an explicit

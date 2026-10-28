@@ -8,7 +8,7 @@ Status date: 2026-10-28 (Asia/Kolkata)
 - Typed, deterministic, side-effect-free signal-checking core.
 - Common execution-mode model with safe `TEST` default and separate equity/F&O
   active flags.
-- Strict group plus sender/channel authentication, forwarded-origin checks,
+- Strict configured-group authentication with sender/forward-origin audit metadata,
   first-durable-receipt freshness with 2-second future skew, action, segment,
   instrument resolution/listing, verified instrument-kind, index, futures, and
   basic stock-option gates.
@@ -45,7 +45,7 @@ Status date: 2026-10-28 (Asia/Kolkata)
   schema validation before activation, SHA-256 identity, restrictive permissions,
   age/size/checksum verification, last-known-good preservation, and pruning CLI.
 - Strict one-file runtime configuration with TEST-only mode default, explicit
-  active flags/groups/source IDs/paths/freshness, owner/mode/symlink checks,
+  active flags/groups/paths/freshness, owner/mode/symlink checks,
   typed Telegram and Dhan TOTP credentials, and redacted secret representations.
 - Telethon NewMessage-only listener for one pre-authorized user session, with
   configured-chat subscription, sender/channel and forwarded-origin extraction,
@@ -73,7 +73,8 @@ Status date: 2026-10-28 (Asia/Kolkata)
   integrity, emergency-stop state, and absent executor; fixed 08:00
   Asia/Kolkata schedule calculation and append-only health audit.
 - Mandatory typed setup for all five requested absolute risk limits whenever a
-  segment is active, plus pure evaluation for those limits, the 5% cash buffer,
+  segment is active, plus a positive starting-capital basis and pure evaluation
+  for those limits, the 5% cash buffer,
   2% daily-capital halt, 1% per-position hard-stop signal, and three-position
   sector cap. Current account/sector evidence is required to authorize entry.
 - Pure fixed-share/equity-budget and fixed-lot/option-budget sizing primitives,

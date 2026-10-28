@@ -13,8 +13,8 @@ broker orders, create fills, or simulate holdings.
 
 The checker accepts an already-normalized signal and applies only agreed rules:
 
-- both the configured Telegram group ID and authorized sender/channel ID must
-  match; forwarded messages also require an authorized original source ID;
+- the configured Telegram group ID must match; every sender and forwarded origin
+  inside a configured signal group proceeds to deterministic validation;
 - message age is measured at the first durable receipt, is at most 60 seconds
   inclusive, and allows exactly 2 seconds of future clock skew;
 - `BUY` is the only executable action under consideration;
@@ -88,7 +88,7 @@ latest snapshot time/counts, stop state, WAL mode, and absent write executor.
 Runtime configuration comes from one owner-only regular environment file. The
 loader rejects symlinks, group/world permissions, unknown/duplicate keys, invalid
 IDs, and missing values. Only `CODEXBOT_MODE` defaults, and it defaults to `TEST`;
-equity/F&O activation, groups, source IDs, paths, snapshot age, Telegram values,
+equity/F&O activation, groups, paths, snapshot age, Telegram values,
 and Dhan TOTP credentials must be explicit. Enabling equity also requires the
 percentage above market, both Yahoo ages at no more than 3 seconds, and explicit
 fixed-fractional risk/allocation values. Secret representations are redacted.
@@ -97,7 +97,7 @@ See [.env.example](.env.example); keep the populated file outside Git with mode
 
 Whenever equity or F&O is active, setup also requires five absolute risk values:
 maximum order amount, daily loss, total exposure, open positions, and daily
-trades. Pure evaluation also applies the fixed 5% cash floor, 95%
+trades, plus a positive starting-capital basis. Pure evaluation also applies the fixed 5% cash floor, 95%
 spendable-funds rule, 2% daily-capital halt, 1% position hard-stop signal, and
 three-position sector cap. It requires actual account and sector facts.
 

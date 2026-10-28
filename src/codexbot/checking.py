@@ -37,12 +37,6 @@ class SignalChecker:
 
         if signal.source_group_id not in self._policy.allowed_group_ids:
             reasons.append(ReasonCode.SOURCE_NOT_CONFIGURED)
-        if signal.source_sender_or_channel_id not in self._policy.authorized_source_ids:
-            reasons.append(ReasonCode.SOURCE_IDENTITY_UNAUTHORIZED)
-        if signal.is_forwarded and (
-            signal.forwarded_from_source_id not in self._policy.authorized_source_ids
-        ):
-            reasons.append(ReasonCode.FORWARDED_SOURCE_UNAUTHORIZED)
 
         if not _is_aware(signal.sent_at) or not _is_aware(signal.first_durable_received_at):
             reasons.append(ReasonCode.INVALID_TIMESTAMP)

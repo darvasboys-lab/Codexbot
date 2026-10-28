@@ -152,9 +152,9 @@ def test_engaged_emergency_stop_rejects_before_duplicate_claim(tmp_path: Path) -
     ("candidate", "instrument", "reason"),
     [
         (
-            envelope(message_id=1, source_id=9999),
+            envelope(message_id=1, group_id=9999, source_id=9999),
             option_facts(),
-            ReasonCode.SOURCE_IDENTITY_UNAUTHORIZED,
+            ReasonCode.SOURCE_NOT_CONFIGURED,
         ),
         (
             envelope(message_id=1, sent_at=NOW - timedelta(seconds=61)),
