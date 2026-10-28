@@ -54,10 +54,13 @@ separately approved live test.
 - Verify TOTP against an RFC vector, naive IST token expiry, response client ID,
   token expiry, secret-free HTTP errors, strict fund-limit fields, and that the
   Dhan adapter exposes no write endpoint.
+- Verify strict order/trade/position list shape, account identity, quantities,
+  positive trade prices, signed P&L, position arithmetic, blank documented order
+  symbols, and the explicitly non-atomic combined reconciliation snapshot.
 - Verify inclusive Yahoo market/local age limits, 2-second future tolerance, INR,
   setup percentage calculation, option 4% ceiling, and floor-to-tick behavior.
 
-Current result: 162 tests pass. Ruff and strict mypy pass.
+Current result: 172 tests pass. Ruff and strict mypy pass.
 
 ## 2. Remaining parser and reference-rule tests
 

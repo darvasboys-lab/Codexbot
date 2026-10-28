@@ -60,7 +60,9 @@ list is never evidence that order submission is authorized.
   snapshots.
 - **Dhan authentication and account health:** local TOTP generation, token
   identity/expiry validation, in-memory token handling, and documented read-only
-  fund-limit verification. Margin, orders, trades, and positions remain planned.
+  fund-limit verification. Strict order, trade, and position snapshots provide
+  the broker side of later reconciliation. Their combined view is non-atomic and
+  cannot itself authorize a retry or exit. Margin remains planned.
 - **Risk engine:** configured caps and portfolio-aware entry authorization.
 - **Execution/reconciliation:** LIVE-only order intents, duplicate-submission
   controls, state reconciliation, bounded partial-fill retry, and protection

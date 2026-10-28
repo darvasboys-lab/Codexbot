@@ -50,7 +50,10 @@ Status date: 2026-10-28 (Asia/Kolkata)
   files/sidecars, worker-thread processing, and health/error state.
 - Secret-safe Dhan TOTP generation, access-token response identity/expiry checks,
   and read-only fund-limit health verification. Tokens remain in memory; the
-  broker module contains no order endpoint.
+  broker module contains no order write endpoint.
+- Strict read-only Dhan order-book, trade-book, and position snapshots for future
+  restart/uncertain-state reconciliation, including partial quantities, prices,
+  identity checks, and position quantity consistency.
 - Structured reason codes and explicit remaining-gate list.
 - Structural safety boundary: the package contains no broker write method, order
   model, fill model, holdings model, or simulator; `trade_ready` is always false.
@@ -73,8 +76,8 @@ Status date: 2026-10-28 (Asia/Kolkata)
 - Production instrument refresh schedule and maximum accepted snapshot age.
 - Interactive Telegram session setup and live credentialed listener verification;
   authenticated operator feedback remains planned.
-- Read-only Dhan margin, order, trade, and position connectivity. Token and fund
-  health connectivity is implemented but awaits credentialed verification.
+- Read-only Dhan margin connectivity. Token, fund, order, trade, and position
+  readers are implemented but await credentialed verification.
 - Journal retention/backup scheduling and restart reconciliation.
 - Composition of pricing, sizing, funds/margin, risk, pending-entry cancellation, execution,
   partial-fill/retry, and protection logic.

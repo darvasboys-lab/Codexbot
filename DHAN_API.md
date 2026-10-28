@@ -147,6 +147,17 @@ Consequences for the approved retry rule:
 
 Source: [Dhan orders](https://dhanhq.co/docs/v2/orders/)
 
+Codexbot implements only `GET /v2/orders` and `GET /v2/trades` from this API. The
+typed readers validate account identity, broker/order/trade identifiers,
+instrument identity, transaction/product/order fields, partial-fill quantities,
+and prices. It also implements read-only `GET /v2/positions`, validates signed
+P&L, and enforces Dhan's documented `netQty = buyQty - sellQty` relationship.
+A combined reconciliation snapshot performs three sequential reads and is
+explicitly non-atomic. It is evidence for later comparison, not permission to
+retry, cancel, or exit.
+
+Source: [Dhan portfolio and positions](https://dhanhq.co/docs/v2/portfolio/)
+
 ## Stop loss and target protection
 
 Dhan documents Super Orders across exchanges/segments and product types including

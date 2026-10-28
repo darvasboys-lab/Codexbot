@@ -72,7 +72,10 @@ is verified.
 The Dhan read-only session generates the documented TOTP locally, validates the
 returned client identity and IST expiry, and verifies the session with
 `GET /v2/fundlimit`. Tokens stay in memory and errors never include a
-credential-bearing URL or header. This module has no order endpoint.
+credential-bearing URL or header. It can also retrieve strict read-only snapshots
+of today's orders/trades and current positions for reconciliation. The combined
+snapshot is marked non-atomic because those are sequential HTTP reads. This module
+has no broker write endpoint.
 
 Runtime configuration comes from one owner-only regular environment file. The
 loader rejects symlinks, group/world permissions, unknown/duplicate keys, invalid
