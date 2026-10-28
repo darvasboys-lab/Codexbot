@@ -47,6 +47,12 @@ The runtime database is SQLite in WAL mode. Offline maintenance is exposed as
 Production scheduling, encrypted backup destination, retention, file ownership,
 disk alerts, and recovery objectives will be set in the VM plan.
 
+`codexbot-admin emergency-stop` is the current SSH control surface. The database
+starts engaged, and every release/engage action records local OS user identity,
+reason, and time in append-only control and audit rows. Systemd permissions must
+limit this command to the operator service account. Broker cancellation and
+position management are still absent and cannot be inferred from this entry gate.
+
 The implemented cache stores Dhan's public detailed master as validated SHA-256
 snapshots and atomically switches a current pointer while preserving last-known-good
 data. The VM plan must schedule `codexbot-instruments refresh`, supply an explicit

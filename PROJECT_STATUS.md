@@ -14,6 +14,8 @@ Status date: 2026-10-28 (Asia/Kolkata)
   basic stock-option gates.
 - SQLite journal in WAL mode with durable idempotent signal receipts, append-only
   audit/receipt/deduplication tables, and atomic 20-second stock-option claims.
+- Append-only emergency-stop controls that default to engaged, audit actor/reason,
+  block candidates before deduplication, and expose local SSH administration.
 - Aggressive stock-option duplicate identity based on canonical underlying only;
   strike, expiry, price, and CE/PE do not distinguish signals in the window.
 - Database integrity, consistent backup, and temporary restore-test functions and
@@ -73,8 +75,8 @@ Status date: 2026-10-28 (Asia/Kolkata)
   authenticated operator feedback remains planned.
 - Read-only Dhan margin, order, trade, and position connectivity. Token and fund
   health connectivity is implemented but awaits credentialed verification.
-- Journal orchestration, retention/backup scheduling, and restart reconciliation.
-- Composition of pricing, sizing, funds/margin, risk, emergency-stop, execution,
+- Journal retention/backup scheduling and restart reconciliation.
+- Composition of pricing, sizing, funds/margin, risk, pending-entry cancellation, execution,
   partial-fill/retry, and protection logic.
 - 08:00 Asia/Kolkata health/token workflow and exchange calendar.
 - SSH terminal dashboard, Google Cloud Logging, Docker, and new GCE deployment.

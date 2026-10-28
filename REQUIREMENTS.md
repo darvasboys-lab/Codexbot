@@ -100,6 +100,10 @@ answer. Code must not turn an open decision into an implicit default.
   total exposure, open positions, and daily trade count.
 - Emergency stop blocks new entries, cancels pending entries, continues managing
   filled positions, and exposes a separate explicit close action.
+- The durable emergency-stop entry gate fails closed on a new database. Only an
+  explicit local operator release allows candidates to proceed. Engage/release
+  actions and reasons are append-only audit facts. Until broker writes exist, the
+  admin status reports pending-entry cancellation as a required future action.
 - Reconcile an uncertain submission outcome before any retry. On partial fill
   after timeout, manage actual fills and make at most one retry for the unfilled
   quantity only after confirming the original remainder is cancelled.

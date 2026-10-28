@@ -16,6 +16,7 @@ dependencies = [
 [project.scripts]
 codexbot-db = "codexbot.db_maintenance:main"
 codexbot-instruments = "codexbot.instrument_maintenance:main"
+codexbot-admin = "codexbot.admin:main"
 
 [project.optional-dependencies]
 dev = [

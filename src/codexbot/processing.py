@@ -112,6 +112,17 @@ class SignalProcessor:
 
         if (
             report.disposition is CheckDisposition.PASSED_CORE
+            and self._journal.emergency_stop_status().engaged
+        ):
+            report = CheckReport(
+                disposition=CheckDisposition.REJECTED,
+                reasons=(ReasonCode.EMERGENCY_STOP_ENGAGED,),
+                pending_gates=(),
+                execution_mode=report.execution_mode,
+            )
+
+        if (
+            report.disposition is CheckDisposition.PASSED_CORE
             and instrument is not None
             and instrument.kind is InstrumentKind.STOCK_OPTION
         ):

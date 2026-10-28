@@ -71,8 +71,9 @@ list is never evidence that order submission is authorized.
   and local age limits and setup percentage. Option pricing applies the approved
   4% ceiling and floors to a verified price tick.
 - **Journal:** SQLite WAL database containing immutable first receipts,
-  append-only audit facts, and atomic option deduplication decisions. Secrets and
-  session material are excluded.
+  append-only audit/control facts, and atomic option deduplication decisions.
+  Emergency stop defaults to engaged and is checked before a duplicate claim.
+  Secrets and session material are excluded.
 - **Admin CLI:** status, effective settings (redacted), orders, positions, errors,
   service control, emergency stop, and separately confirmed close action over SSH.
 
@@ -120,6 +121,8 @@ encryption, and recovery objectives remain deployment decisions.
 ## Failure posture
 
 - Missing or stale facts fail closed for new entries.
+- Absence of an explicit emergency-stop release blocks new entries. Engaging the
+  stop again blocks candidates before they consume a duplicate window.
 - Telegram reconnect does not automatically trade a backlog.
 - Dhan authentication or health failure blocks new LIVE entries and alerts the
   log group; exact retry/escalation semantics remain open.

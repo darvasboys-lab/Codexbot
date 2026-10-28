@@ -40,6 +40,11 @@ claim, and decision rows are append-only. The Yahoo adapter retrieves timestampe
 NSE (`.NS`) and BSE (`.BO`) equity quotes and requires the caller to supply the
 still-open maximum acceptable quote age.
 
+The journal also stores append-only emergency-stop history. A new database starts
+with the stop engaged until the local operator explicitly releases it. The signal
+processor checks this gate before an option duplicate claim, so a stopped
+candidate does not consume the 20-second window.
+
 Rejected option candidates do not reserve the duplicate window. The processor
 creates a claim only after the currently implemented source, freshness, BUY,
 segment, listing, stock-option identity, unique-contract, canonical-underlying,
@@ -109,6 +114,9 @@ uv run --frozen codexbot-db restore-test --backup /backup/codexbot.sqlite3
 uv run --frozen codexbot-instruments --cache-directory data/instruments refresh
 uv run --frozen codexbot-instruments --cache-directory data/instruments status --maximum-age-hours HOURS
 uv run --frozen codexbot-instruments --cache-directory data/instruments prune --keep 2
+uv run --frozen codexbot-admin emergency-stop --database data/codexbot.sqlite3 status
+uv run --frozen codexbot-admin emergency-stop --database data/codexbot.sqlite3 engage --reason "manual safety stop"
+uv run --frozen codexbot-admin emergency-stop --database data/codexbot.sqlite3 release --reason "startup checks completed"
 ```
 
 The CI workflow runs the same lint, type, and test checks. No credential is

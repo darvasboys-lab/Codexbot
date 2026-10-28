@@ -22,6 +22,8 @@ separately approved live test.
 - Verify WAL configuration, immutable first-receipt idempotency, append-only
   enforcement, exact duplicate boundaries, cross-group behavior, and a concurrent
   two-writer claim race.
+- Verify emergency stop defaults engaged, stores append-only actor/reason history,
+  is operable through the local CLI, and blocks before a duplicate claim.
 - Verify Yahoo NSE/BSE symbol construction, timestamps, caller-defined quote age,
   and fail-closed malformed-response handling with an injected local transport.
 - Verify the supplied CDSL option range uses 35 as its upper bound; Telegram
@@ -55,7 +57,7 @@ separately approved live test.
 - Verify inclusive Yahoo market/local age limits, 2-second future tolerance, INR,
   setup percentage calculation, option 4% ceiling, and floor-to-tick behavior.
 
-Current result: 155 tests pass. Ruff and strict mypy pass.
+Current result: 162 tests pass. Ruff and strict mypy pass.
 
 ## 2. Remaining parser and reference-rule tests
 

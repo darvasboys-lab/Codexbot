@@ -47,6 +47,11 @@ def processor(
     database_path = tmp_path / "codexbot.sqlite3"
     journal = SQLiteJournal(database_path, clock=clock)
     journal.initialize()
+    journal.set_emergency_stop(
+        engaged=False,
+        reason="test fixture enables validation flow",
+        actor="test-suite",
+    )
     checker = SignalChecker(
         CheckerPolicy(
             allowed_group_ids=frozenset({1001, 1002}),
@@ -124,6 +129,23 @@ def test_valid_listed_option_claims_after_core_validation(tmp_path: Path) -> Non
     assert result.instrument == option_facts()
     assert claim_count(database_path) == 1
     assert resolver.as_of_dates == [date(2026, 10, 27)]
+
+
+def test_engaged_emergency_stop_rejects_before_duplicate_claim(tmp_path: Path) -> None:
+    clock = MutableClock(NOW)
+    signal_processor, database_path, _ = processor(tmp_path, clock, option_facts())
+    SQLiteJournal(database_path, clock=clock).set_emergency_stop(
+        engaged=True,
+        reason="manual safety stop",
+        actor="operator",
+    )
+
+    result = signal_processor.process(envelope(message_id=1))
+
+    assert result.report.disposition is CheckDisposition.REJECTED
+    assert result.report.reasons == (ReasonCode.EMERGENCY_STOP_ENGAGED,)
+    assert result.duplicate_claim is None
+    assert claim_count(database_path) == 0
 
 
 @pytest.mark.parametrize(
@@ -251,6 +273,7 @@ def test_processing_audit_records_parse_and_final_decision(tmp_path: Path) -> No
             for row in connection.execute("SELECT event_type FROM audit_events ORDER BY id")
         ]
     assert event_types == [
+        "EMERGENCY_STOP_CHANGED",
         "SIGNAL_RECEIVED",
         "SIGNAL_PARSED",
         "INSTRUMENT_RESOLVED",

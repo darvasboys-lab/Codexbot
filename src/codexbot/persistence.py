@@ -26,6 +26,7 @@ _REQUIRED_TABLES = frozenset(
         "signal_receipts",
         "option_duplicate_claims",
         "option_duplicate_decisions",
+        "runtime_control_events",
     }
 )
 
@@ -46,6 +47,21 @@ class DuplicateClaimResult:
     canonical_underlying_id: str
     first_durable_received_at: datetime
     matched_claim_id: int | None
+
+
+@dataclass(frozen=True, slots=True)
+class EmergencyStopStatus:
+    """Latest durable entry-gate state; absence of a release fails closed."""
+
+    engaged: bool
+    changed_at: datetime | None
+    reason: str
+    actor: str | None
+    event_id: int | None
+
+    @property
+    def new_entries_allowed(self) -> bool:
+        return not self.engaged
 
 
 class SQLiteJournal:
@@ -367,6 +383,78 @@ class SQLiteJournal:
                 matched_claim_id=claim_id,
             )
 
+    def emergency_stop_status(self) -> EmergencyStopStatus:
+        """Return the latest stop state; a new database starts engaged."""
+
+        with self._connect() as connection:
+            row = connection.execute(
+                """
+                SELECT id, occurred_at, engaged, reason, actor
+                FROM runtime_control_events
+                ORDER BY id DESC
+                LIMIT 1
+                """
+            ).fetchone()
+        if row is None:
+            return EmergencyStopStatus(
+                engaged=True,
+                changed_at=None,
+                reason="NO_RELEASE_RECORDED",
+                actor=None,
+                event_id=None,
+            )
+        return _emergency_stop_from_row(row)
+
+    def set_emergency_stop(self, *, engaged: bool, reason: str, actor: str) -> EmergencyStopStatus:
+        """Append an operator control event and matching immutable audit fact."""
+
+        normalized_reason = reason.strip()
+        normalized_actor = actor.strip()
+        if not normalized_reason:
+            raise ValueError("emergency-stop reason is required")
+        if len(normalized_reason) > 500:
+            raise ValueError("emergency-stop reason cannot exceed 500 characters")
+        if not normalized_actor:
+            raise ValueError("emergency-stop actor is required")
+        if len(normalized_actor) > 200:
+            raise ValueError("emergency-stop actor cannot exceed 200 characters")
+
+        occurred_at = self._now()
+        with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            cursor = connection.execute(
+                """
+                INSERT INTO runtime_control_events (
+                    occurred_at, control_name, engaged, reason, actor
+                ) VALUES (?, 'EMERGENCY_STOP', ?, ?, ?)
+                """,
+                (
+                    _datetime_text(occurred_at),
+                    int(engaged),
+                    normalized_reason,
+                    normalized_actor,
+                ),
+            )
+            event_id = _last_row_id(cursor)
+            state = "ENGAGED" if engaged else "RELEASED"
+            self._append_audit_event(
+                connection,
+                event_type="EMERGENCY_STOP_CHANGED",
+                entity_type="runtime_control",
+                entity_id=str(event_id),
+                state=state,
+                details={"actor": normalized_actor, "reason": normalized_reason},
+                occurred_at=occurred_at,
+            )
+            connection.commit()
+        return EmergencyStopStatus(
+            engaged=engaged,
+            changed_at=occurred_at,
+            reason=normalized_reason,
+            actor=normalized_actor,
+            event_id=event_id,
+        )
+
     def _connect(self) -> sqlite3.Connection:
         connection = sqlite3.connect(self._path, isolation_level=None)
         connection.row_factory = sqlite3.Row
@@ -473,6 +561,16 @@ def _receipt_from_row(row: sqlite3.Row) -> SignalReceipt:
     )
 
 
+def _emergency_stop_from_row(row: sqlite3.Row) -> EmergencyStopStatus:
+    return EmergencyStopStatus(
+        engaged=bool(row["engaged"]),
+        changed_at=_parse_datetime(str(row["occurred_at"])),
+        reason=str(row["reason"]),
+        actor=str(row["actor"]),
+        event_id=int(row["id"]),
+    )
+
+
 def _last_row_id(cursor: sqlite3.Cursor) -> int:
     if cursor.lastrowid is None:
         raise RuntimeError("SQLite did not return a row ID")
@@ -550,6 +648,15 @@ CREATE TABLE IF NOT EXISTS option_duplicate_decisions (
     matched_claim_id INTEGER NOT NULL REFERENCES option_duplicate_claims(id)
 );
 
+CREATE TABLE IF NOT EXISTS runtime_control_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    occurred_at TEXT NOT NULL,
+    control_name TEXT NOT NULL CHECK (control_name = 'EMERGENCY_STOP'),
+    engaged INTEGER NOT NULL CHECK (engaged IN (0, 1)),
+    reason TEXT NOT NULL CHECK (length(reason) BETWEEN 1 AND 500),
+    actor TEXT NOT NULL CHECK (length(actor) BETWEEN 1 AND 200)
+);
+
 CREATE TRIGGER IF NOT EXISTS audit_events_no_update
 BEFORE UPDATE ON audit_events
 BEGIN
@@ -596,5 +703,17 @@ CREATE TRIGGER IF NOT EXISTS option_decisions_no_delete
 BEFORE DELETE ON option_duplicate_decisions
 BEGIN
     SELECT RAISE(ABORT, 'option_duplicate_decisions is append-only');
+END;
+
+CREATE TRIGGER IF NOT EXISTS runtime_control_no_update
+BEFORE UPDATE ON runtime_control_events
+BEGIN
+    SELECT RAISE(ABORT, 'runtime_control_events is append-only');
+END;
+
+CREATE TRIGGER IF NOT EXISTS runtime_control_no_delete
+BEFORE DELETE ON runtime_control_events
+BEGIN
+    SELECT RAISE(ABORT, 'runtime_control_events is append-only');
 END;
 """

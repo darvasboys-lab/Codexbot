@@ -263,6 +263,11 @@ def test_dhan_resolver_feeds_test_safe_processor(tmp_path: Path) -> None:
     resolver = DhanInstrumentResolver.from_csv_text(master_text(instrument_row()))
     journal = SQLiteJournal(tmp_path / "codexbot.sqlite3", clock=lambda: now)
     journal.initialize()
+    journal.set_emergency_stop(
+        engaged=False,
+        reason="test fixture enables validation flow",
+        actor="test-suite",
+    )
     signal_processor = SignalProcessor(
         journal=journal,
         parser=TelegramMessageParser(),

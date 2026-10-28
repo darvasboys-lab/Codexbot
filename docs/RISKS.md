@@ -15,5 +15,5 @@ Status date: 2026-10-28 (Asia/Kolkata)
 | Unexpected mode transition | Reconcile first; recheck durable common mode at submission boundary; manage filled exposure under an approved policy | Policy open |
 | AI hallucination, latency, or data disclosure | Advisory-only review, deterministic revalidation, bounded timeout/cost, audit, and approved provider/data policy | Policy open |
 | VM/SQLite loss or corruption | WAL, short transactions, integrity/backup/restore commands, encrypted scheduled backups, restore drills, disk alerts | Core tooling implemented; VM operations open |
-| Emergency stop gives false safety | Check durable stop immediately before entry; cancel/reconcile pending entries; separately authenticate close action | Not implemented |
+| Emergency stop gives false safety | Append-only fail-closed entry gate is checked before deduplication; future write adapter must cancel/reconcile pending entries and separately authenticate close action | Entry gate implemented; broker actions blocked |
 | Broker/API behavior changes | Pin tested client behavior, monitor official release notes, contract-test read APIs, reverify before LIVE | Ongoing |
