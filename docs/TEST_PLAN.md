@@ -64,7 +64,10 @@ prove it cannot silently become a BUY.
 ## 3. Remaining durable journal and restart tests
 
 - verify event ordering under sustained concurrent group arrivals;
-- restart the process and recover every incomplete state without creating orders;
+- inspect unfinished durable receipts after a restart without creating orders,
+  replaying signals, or mutating the journal (offline diagnostic implemented);
+- reconcile every incomplete broker/order state after a restart without creating
+  duplicate orders (not implemented);
 - test production file ownership, disk-full behavior, scheduled encrypted backup,
   and recovery timing; offline integrity, backup, and restore tests are implemented;
 - verify logs and database records redact credentials/session data; and
