@@ -135,7 +135,9 @@ def test_symlink_database_is_rejected(tmp_path: Path) -> None:
         inspect_unfinished_receipts(alias)
 
 
-def test_cli_unfinished_exit_status_and_no_payload(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+def test_cli_unfinished_exit_status_and_no_payload(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
     path = tmp_path / "journal.sqlite3"
     journal = _journal(path)
     receipt = journal.record_signal_receipt(
