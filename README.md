@@ -111,6 +111,11 @@ The Telegram adapter uses one Telethon user session and registers only
 sender/channel, and forward-origin IDs, hands the event to durable processing,
 and never handles edits or deletions. The service refuses interactive login and
 requires an already-authorized owner-only session created during separate setup.
+By default it sends each deterministic outcome to the configured log group as
+plain text. Reports exclude raw message text, contain only fixed error classes,
+and always state `Trade ready: NO` and `Broker action: NONE`. Daily summary counts
+are derived from immutable Asia/Kolkata audit events; automated delivery still
+depends on the open calendar and notification schedule.
 
 The runtime health coordinator refreshes Dhan authentication and combines the
 read-only broker probe with Telegram connection/authorization, SQLite integrity,
@@ -148,6 +153,7 @@ uv run --frozen codexbot-admin emergency-stop --database data/codexbot.sqlite3 s
 uv run --frozen codexbot-admin emergency-stop --database data/codexbot.sqlite3 engage --reason "manual safety stop"
 uv run --frozen codexbot-admin emergency-stop --database data/codexbot.sqlite3 release --reason "startup checks completed"
 uv run --frozen codexbot-admin status --database data/codexbot.sqlite3
+uv run --frozen codexbot-admin daily-summary --database data/codexbot.sqlite3 --date YYYY-MM-DD
 ```
 
 The CI workflow runs the same lint, type, and test checks. No credential is
@@ -157,6 +163,7 @@ Read these before making changes:
 
 - [Requirements](REQUIREMENTS.md)
 - [Project status](PROJECT_STATUS.md)
+- [Progress and decision dashboard](PROGRESS.md)
 - [Dhan API evidence](DHAN_API.md)
 - [Deployment constraints](DEPLOYMENT.md)
 - [Architecture](docs/ARCHITECTURE.md)

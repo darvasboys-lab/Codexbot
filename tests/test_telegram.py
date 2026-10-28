@@ -9,10 +9,17 @@ from telethon import events, utils  # type: ignore[import-untyped]
 from telethon.tl.types import PeerChannel  # type: ignore[import-untyped]
 
 from codexbot import (
+    Action,
     BotSettings,
+    CheckDisposition,
+    CheckReport,
     ExecutionMode,
+    ParsedMessage,
+    ParseReason,
+    ProcessingResult,
     SecretValue,
     SignalProcessor,
+    SignalReceipt,
     TelegramCredentials,
     TelegramListenerError,
     TelethonListener,
@@ -58,6 +65,7 @@ class FakeClient:
         self.authorized = authorized
         self.connected = False
         self.event_builders: list[object] = []
+        self.sent_messages: list[tuple[int, str, object, bool]] = []
 
     def on(self, event_builder: object) -> Any:
         self.event_builders.append(event_builder)
@@ -81,6 +89,50 @@ class FakeClient:
 
     async def disconnect(self) -> None:
         self.connected = False
+
+    async def send_message(
+        self,
+        entity: int,
+        message: str,
+        *,
+        parse_mode: object,
+        link_preview: bool,
+    ) -> None:
+        self.sent_messages.append((entity, message, parse_mode, link_preview))
+
+
+class StubProcessor:
+    def process(self, envelope: object) -> ProcessingResult:
+        del envelope
+        return ProcessingResult(
+            receipt=SignalReceipt(
+                id=1,
+                source_group_id=-1001,
+                telegram_message_id=42,
+                sent_at=NOW,
+                first_durable_received_at=NOW,
+            ),
+            parsed=ParsedMessage(
+                action=Action.BUY,
+                segment=None,
+                reason=ParseReason.UNSUPPORTED_PATTERN,
+                symbol="CDSL",
+            ),
+            instrument=None,
+            report=CheckReport(
+                disposition=CheckDisposition.REJECTED,
+                reasons=(),
+                pending_gates=(),
+                execution_mode=ExecutionMode.TEST,
+            ),
+            duplicate_claim=None,
+        )
+
+
+class FailingProcessor:
+    def process(self, envelope: object) -> ProcessingResult:
+        del envelope
+        raise RuntimeError("sensitive upstream detail")
 
 
 def private_session(tmp_path: Path) -> Path:
@@ -186,3 +238,53 @@ def test_listener_runs_authorized_session_and_disconnects_cleanly(tmp_path: Path
     assert listener.health.connected is False
     assert listener.health.last_error_code is None
     assert fake_client.connected is False
+
+
+def test_listener_sends_default_plain_text_result_to_configured_log_group(
+    tmp_path: Path,
+) -> None:
+    session_path = private_session(tmp_path)
+    fake_client = FakeClient(authorized=True)
+    fake_client.connected = True
+    listener = TelethonListener(
+        settings=settings(session_path),
+        credentials=TelegramCredentials(api_id=123, api_hash=SecretValue("secret")),
+        processor=cast(SignalProcessor, StubProcessor()),
+        clock=lambda: NOW,
+    )
+    listener._client = cast(Any, fake_client)
+
+    asyncio.run(listener._handle_event(event()))
+
+    assert listener.health.last_error_code is None
+    assert len(fake_client.sent_messages) == 1
+    destination, message, parse_mode, link_preview = fake_client.sent_messages[0]
+    assert destination == -9001
+    assert "[TEST] SIGNAL REJECTED" in message
+    assert "Broker action: NONE" in message
+    assert parse_mode is None
+    assert link_preview is False
+
+
+def test_listener_reports_only_error_class_without_sensitive_exception_text(
+    tmp_path: Path,
+) -> None:
+    session_path = private_session(tmp_path)
+    fake_client = FakeClient(authorized=True)
+    fake_client.connected = True
+    listener = TelethonListener(
+        settings=settings(session_path),
+        credentials=TelegramCredentials(api_id=123, api_hash=SecretValue("secret")),
+        processor=cast(SignalProcessor, FailingProcessor()),
+        clock=lambda: NOW,
+    )
+    listener._client = cast(Any, fake_client)
+
+    asyncio.run(listener._handle_event(event()))
+
+    assert listener.health.last_error_code == "RuntimeError"
+    assert len(fake_client.sent_messages) == 1
+    message = fake_client.sent_messages[0][1]
+    assert "Error code: RuntimeError" in message
+    assert "sensitive upstream detail" not in message
+    assert "Broker action: NONE" in message

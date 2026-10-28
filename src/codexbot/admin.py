@@ -7,9 +7,11 @@ import json
 import os
 import pwd
 from collections.abc import Sequence
+from datetime import date
 from pathlib import Path
 
 from codexbot.persistence import EmergencyStopStatus, SQLiteJournal
+from codexbot.reporting import format_daily_summary
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -17,6 +19,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     subparsers = parser.add_subparsers(dest="command", required=True)
     status_parser = subparsers.add_parser("status", help="show durable local runtime state")
     status_parser.add_argument("--database", type=Path, required=True)
+    summary_parser = subparsers.add_parser(
+        "daily-summary", help="show an audit-derived Asia/Kolkata service date"
+    )
+    summary_parser.add_argument("--database", type=Path, required=True)
+    summary_parser.add_argument("--date", type=date.fromisoformat, required=True)
     stop_parser = subparsers.add_parser(
         "emergency-stop", help="inspect or change the durable new-entry gate"
     )
@@ -33,6 +40,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     journal.initialize()
     if arguments.command == "status":
         print(json.dumps(_system_status_payload(journal), sort_keys=True, separators=(",", ":")))
+        return 0
+    if arguments.command == "daily-summary":
+        print(format_daily_summary(journal.daily_audit_summary(arguments.date)))
         return 0
     if arguments.command != "emergency-stop":
         parser.error("unknown command")

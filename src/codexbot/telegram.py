@@ -18,6 +18,7 @@ from typing import Any, Protocol
 from telethon import TelegramClient, events, utils  # type: ignore[import-untyped]
 
 from codexbot.processing import ProcessingResult, SignalProcessor, TelegramEnvelope
+from codexbot.reporting import format_listener_error, format_processing_result
 from codexbot.settings import BotSettings, TelegramCredentials
 
 
@@ -59,7 +60,7 @@ class TelethonListener:
         self._settings = settings
         self._credentials = credentials
         self._processor = processor
-        self._result_handler = result_handler or _ignore_result
+        self._result_handler = result_handler
         self._error_handler = error_handler or _ignore_error
         self._clock = clock or (lambda: datetime.now(UTC))
         self._client_factory = client_factory
@@ -124,11 +125,39 @@ class TelethonListener:
             result = await asyncio.to_thread(self._processor.process, envelope)
             self.health.last_processed_at = _aware_utc(self._clock())
             self.health.last_error_code = None
-            await self._result_handler(result)
+            if self._result_handler is not None:
+                await self._result_handler(result)
+            else:
+                await self._send_result_to_log(result)
         except Exception as error:
             error_code = type(error).__name__
             self.health.last_error_code = error_code
-            await self._error_handler(error_code)
+            if self._error_handler is not _ignore_error:
+                await self._error_handler(error_code)
+            else:
+                try:
+                    await self._send_log_text(
+                        format_listener_error(
+                            execution_mode=self._settings.mode.value,
+                            error_code=error_code,
+                        )
+                    )
+                except Exception:
+                    pass
+
+    async def _send_result_to_log(self, result: ProcessingResult) -> None:
+        await self._send_log_text(format_processing_result(result))
+
+    async def _send_log_text(self, text: str) -> None:
+        client = self._client
+        if client is None or not client.is_connected():
+            raise TelegramListenerError("Telegram log client is unavailable")
+        await client.send_message(
+            self._settings.log_group_id,
+            text,
+            parse_mode=None,
+            link_preview=False,
+        )
 
 
 def telegram_envelope_from_event(event: Any) -> TelegramEnvelope:
@@ -213,10 +242,6 @@ def _aware_utc(value: datetime) -> datetime:
     if value.tzinfo is None or value.utcoffset() is None:
         raise TelegramListenerError("Telegram listener clock must be timezone-aware")
     return value.astimezone(UTC)
-
-
-async def _ignore_result(result: ProcessingResult) -> None:
-    del result
 
 
 async def _ignore_error(error_code: str) -> None:

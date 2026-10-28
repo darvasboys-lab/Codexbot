@@ -52,6 +52,7 @@ from codexbot.models import (
 from codexbot.parsing import OptionType, ParsedMessage, ParseReason, TelegramMessageParser
 from codexbot.persistence import (
     BrokerSnapshotStatus,
+    DailyAuditSummary,
     DuplicateClaimResult,
     EmergencyStopStatus,
     SignalReceipt,
@@ -70,6 +71,11 @@ from codexbot.processing import (
     ProcessingResult,
     SignalProcessor,
     TelegramEnvelope,
+)
+from codexbot.reporting import (
+    format_daily_summary,
+    format_listener_error,
+    format_processing_result,
 )
 from codexbot.risk import (
     EntryRiskFacts,
@@ -129,6 +135,7 @@ __all__ = [
     "DhanReadOnlySession",
     "DhanReconciliationSnapshot",
     "DhanTradeSnapshot",
+    "DailyAuditSummary",
     "DownloadEvidence",
     "DuplicateClaimResult",
     "EmergencyStopStatus",
@@ -183,6 +190,9 @@ __all__ = [
     "YahooFinanceMarketData",
     "configuration_from_mapping",
     "evaluate_entry_risk",
+    "format_daily_summary",
+    "format_listener_error",
+    "format_processing_result",
     "calculate_option_entry_price",
     "harden_telegram_session",
     "generate_totp",

@@ -50,7 +50,11 @@ separately approved live test.
 - Verify Telegram envelope extraction, marked forwarded-channel IDs, hidden
   origins, missing sender identity, session file/directory permission checks,
   sidecar hardening, unauthorized-session refusal, authorized lifecycle cleanup,
-  and NewMessage-only registration with a fake client.
+  NewMessage-only registration, default log-group destination, plain-text mode,
+  and secret-free error reporting with a fake client.
+- Verify signal reports show pending gates and no broker action; verify daily
+  summaries count only immutable events within the Asia/Kolkata service date and
+  cannot be confused with simulated orders, fills, or holdings.
 - Verify TOTP against an RFC vector, naive IST token expiry, response client ID,
   token expiry, secret-free HTTP errors, strict fund-limit fields, and that the
   Dhan adapter exposes no write endpoint.
@@ -71,7 +75,7 @@ separately approved live test.
 - Verify inclusive Yahoo market/local age limits, 2-second future tolerance, INR,
   setup percentage calculation, option 4% ceiling, and floor-to-tick behavior.
 
-Current result: 198 tests pass. Ruff and strict mypy pass.
+Current result: 205 tests pass. Ruff and strict mypy pass.
 
 ## 2. Remaining parser and reference-rule tests
 

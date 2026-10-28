@@ -36,7 +36,9 @@ list is never evidence that order submission is authorized.
   session state, provides group/sender/channel/forward metadata, and applies the
   approved restart/backlog policy once Udit chooses it. The service registers
   only `NewMessage`, uses finite reconnect attempts, and refuses interactive
-  authorization at startup.
+  authorization at startup. Its default result path sends a plain-text,
+  no-broker-action report to the configured log group and redacts errors to a
+  fixed class name.
 - **Parser:** conservatively recognizes the supplied compact stock-option BUY and
   two EXIT forms. It preserves the option request and price bounds while treating
   supplied advisory, negated, status/log, and no-caption media examples as
@@ -84,6 +86,9 @@ list is never evidence that order submission is authorized.
   append-only audit/control facts, and atomic option deduplication decisions.
   Emergency stop defaults to engaged and is checked before a duplicate claim.
   Secrets and session material are excluded.
+- **Reporting:** formats deterministic results without raw Telegram text and
+  derives daily counts from immutable events using Asia/Kolkata date boundaries.
+  Summary scheduling remains outside the formatter.
 - **Admin CLI:** status, effective settings (redacted), orders, positions, errors,
   service control, emergency stop, and separately confirmed close action over SSH.
   The implemented status shows WAL, emergency stop, latest real-broker snapshot

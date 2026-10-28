@@ -17,5 +17,5 @@ This repository is for Udit's single-account Telegram-to-Dhan trading bot.
   candidate rule before reuse; preserve approved rules exactly.
 - Do not invent Dhan behavior. Link verified official documentation in
   `DHAN_API.md` and keep unresolved broker behavior blocked.
-- Keep `README.md`, `REQUIREMENTS.md`, `PROJECT_STATUS.md`, `DHAN_API.md`, and
-  `DEPLOYMENT.md` current with each material change.
+- Keep `README.md`, `REQUIREMENTS.md`, `PROJECT_STATUS.md`, `PROGRESS.md`,
+  `DHAN_API.md`, and `DEPLOYMENT.md` current with each material change.

@@ -39,6 +39,9 @@ The unattended service refuses a missing or unauthorized session. The session
 parent directory must be `0700`; the session and SQLite sidecars must be `0600`.
 The session path remains outside the checkout and backup/log collection must
 exclude its contents.
+The same authorized Telegram client sends fixed plain-text processing results to
+the configured log group. No bot token or second account is required. Credentialed
+TEST must verify destination IDs and operator visibility before service rollout.
 
 Dhan TOTP authentication can generate a 24-hour token and verify it through the
 read-only fund endpoint. The current adapter keeps that token only in process

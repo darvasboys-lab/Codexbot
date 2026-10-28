@@ -115,3 +115,36 @@ def test_admin_status_is_read_only_summary_without_fake_portfolio(
     assert status["broker_snapshot"] is None
     assert status["emergency_stop"]["emergency_stop"] == "ENGAGED"
     assert "simulated" not in json.dumps(status).lower()
+
+
+def test_admin_daily_summary_uses_requested_service_date(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    database = tmp_path / "codexbot.sqlite3"
+    journal = SQLiteJournal(database, clock=lambda: NOW)
+    journal.initialize()
+    journal.append_audit_event(
+        event_type="SIGNAL_RECEIVED",
+        entity_type="signal_receipt",
+        entity_id="1",
+        state="DURABLE",
+        occurred_at=NOW,
+    )
+
+    assert (
+        main(
+            [
+                "daily-summary",
+                "--database",
+                str(database),
+                "--date",
+                "2026-10-28",
+            ]
+        )
+        == 0
+    )
+
+    output = capsys.readouterr().out
+    assert "DAILY SUMMARY 2026-10-28 Asia/Kolkata" in output
+    assert "Signals received: 1" in output
+    assert "Simulated orders/fills/holdings: NEVER CREATED" in output

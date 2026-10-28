@@ -120,6 +120,10 @@ answer. Code must not turn an open decision into an implicit default.
   quantity only after confirming the original remainder is cancelled.
 - Log recognized, rejected/filtered messages and reasons, validations, orders,
   errors, and a daily summary. Preserve an authenticated, immutable audit trail.
+- The initial log-group format is plain text and excludes raw message and
+  exception text. It shows stable reasons/pending gates, source/message identity,
+  `Trade ready: NO`, and `Broker action: NONE`. Daily counts come only from the
+  immutable audit journal; delivery timing remains tied to the open calendar policy.
 - Persist only actual Dhan order/trade/position reads as broker observations.
   Store each three-resource snapshot atomically and append-only; TEST must never
   populate these tables with invented or simulated state.

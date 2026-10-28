@@ -12,15 +12,17 @@ import sqlite3
 import tempfile
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING
+from zoneinfo import ZoneInfo
 
 if TYPE_CHECKING:
     from codexbot.dhan import DhanReconciliationSnapshot
     from codexbot.models import CheckReport
 
 _DUPLICATE_WINDOW = timedelta(seconds=20)
+_INDIA = ZoneInfo("Asia/Kolkata")
 _REQUIRED_TABLES = frozenset(
     {
         "audit_events",
@@ -80,6 +82,19 @@ class BrokerSnapshotStatus:
     order_count: int
     trade_count: int
     position_count: int
+
+
+@dataclass(frozen=True, slots=True)
+class DailyAuditSummary:
+    service_date: date
+    signals_received: int
+    redeliveries_ignored: int
+    passed_core: int
+    rejected: int
+    filtered: int
+    duplicates_rejected: int
+    unhealthy_system_checks: int
+    broker_snapshots: int
 
 
 class SQLiteJournal:
@@ -632,6 +647,38 @@ class SQLiteJournal:
             order_count=int(row["order_count"]),
             trade_count=int(row["trade_count"]),
             position_count=int(row["position_count"]),
+        )
+
+    def daily_audit_summary(self, service_date: date) -> DailyAuditSummary:
+        """Count immutable events inside one Asia/Kolkata service date."""
+
+        start = datetime.combine(service_date, time.min, tzinfo=_INDIA).astimezone(UTC)
+        end = datetime.combine(
+            service_date + timedelta(days=1), time.min, tzinfo=_INDIA
+        ).astimezone(UTC)
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT event_type, state, COUNT(*) AS event_count
+                FROM audit_events
+                WHERE occurred_at >= ? AND occurred_at < ?
+                GROUP BY event_type, state
+                """,
+                (_datetime_text(start), _datetime_text(end)),
+            ).fetchall()
+        counts = {
+            (str(row["event_type"]), str(row["state"])): int(row["event_count"]) for row in rows
+        }
+        return DailyAuditSummary(
+            service_date=service_date,
+            signals_received=counts.get(("SIGNAL_RECEIVED", "DURABLE"), 0),
+            redeliveries_ignored=counts.get(("SIGNAL_REDELIVERED", "IGNORED"), 0),
+            passed_core=counts.get(("SIGNAL_CHECKED", "PASSED_CORE"), 0),
+            rejected=counts.get(("SIGNAL_CHECKED", "REJECTED"), 0),
+            filtered=counts.get(("SIGNAL_CHECKED", "FILTERED"), 0),
+            duplicates_rejected=counts.get(("OPTION_DUPLICATE_REJECTED", "DUPLICATE"), 0),
+            unhealthy_system_checks=counts.get(("SYSTEM_HEALTH_CHECKED", "UNHEALTHY"), 0),
+            broker_snapshots=counts.get(("BROKER_RECONCILIATION_OBSERVED", "DURABLE"), 0),
         )
 
     def _connect(self) -> sqlite3.Connection:

@@ -48,6 +48,11 @@ Status date: 2026-10-28 (Asia/Kolkata)
   configured-chat subscription, sender/channel and forwarded-origin extraction,
   hidden-origin rejection support, finite reconnect settings, protected session
   files/sidecars, worker-thread processing, and health/error state.
+- Default plain-text log-group result/error reporting without raw message or
+  exception text, explicit no-broker-action labeling, and audit-derived
+  Asia/Kolkata daily summary counts.
+- `PROGRESS.md` milestone/decision dashboard separating offline implementation,
+  credentialed TEST evidence, deployment, and LIVE authorization.
 - Secret-safe Dhan TOTP generation, access-token response identity/expiry checks,
   and read-only fund-limit health verification. Tokens remain in memory; the
   broker module contains no order write endpoint.
@@ -69,7 +74,8 @@ Status date: 2026-10-28 (Asia/Kolkata)
   for each active segment; fixed values must be positive whole units.
 - Structured reason codes and explicit remaining-gate list.
 - Structural safety boundary: the package contains no broker write method, order
-  model, fill model, holdings model, or simulator; `trade_ready` is always false.
+  command/intent, simulated fill/holding model, or simulator; `trade_ready` is
+  always false. Broker order/trade/position types are read-only observations.
 - Automated unit tests for implemented behavior and safety boundaries.
 - Completed reference-archive review with no source reuse; candidate formats,
   conflicts, and rejected legacy behavior are documented.
@@ -97,7 +103,8 @@ Status date: 2026-10-28 (Asia/Kolkata)
   pending-entry cancellation, execution,
   partial-fill/retry, and protection logic.
 - Exchange calendar, missed/late 08:00 behavior, health retries, and notification
-  delivery. The one-shot health/token composition and fixed time are implemented.
+  and daily-summary delivery. The one-shot health/token composition, fixed time,
+  per-signal reporting, and summary calculation are implemented.
 - SSH terminal dashboard, Google Cloud Logging, Docker, and new GCE deployment.
 - Any `LIVE` order path or live test.
 
