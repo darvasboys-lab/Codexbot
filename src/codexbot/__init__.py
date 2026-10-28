@@ -1,6 +1,15 @@
 """Safe, deterministic core for Codexbot."""
 
 from codexbot.checking import SignalChecker
+from codexbot.dhan import (
+    DhanAccessToken,
+    DhanError,
+    DhanFundLimits,
+    DhanHealthResult,
+    DhanHttpsTransport,
+    DhanReadOnlySession,
+    generate_totp,
+)
 from codexbot.instrument_cache import (
     DHAN_DETAILED_MASTER_URL,
     DhanInstrumentMasterCache,
@@ -37,6 +46,14 @@ from codexbot.models import (
 )
 from codexbot.parsing import OptionType, ParsedMessage, ParseReason, TelegramMessageParser
 from codexbot.persistence import DuplicateClaimResult, SignalReceipt, SQLiteJournal
+from codexbot.pricing import (
+    EquityEntryReference,
+    EquityPricingPolicy,
+    OptionEntryPrice,
+    PricingError,
+    calculate_option_entry_price,
+    validate_equity_entry_reference,
+)
 from codexbot.processing import (
     InstrumentResolver,
     ProcessingResult,
@@ -69,14 +86,22 @@ __all__ = [
     "CheckReport",
     "CheckerPolicy",
     "DHAN_DETAILED_MASTER_URL",
+    "DhanAccessToken",
+    "DhanError",
+    "DhanFundLimits",
+    "DhanHealthResult",
+    "DhanHttpsTransport",
     "DhanInstrument",
     "DhanInstrumentResolver",
     "DhanCredentials",
     "DhanInstrumentMasterCache",
+    "DhanReadOnlySession",
     "DownloadEvidence",
     "DuplicateClaimResult",
     "ExecutionMode",
     "EquityQuote",
+    "EquityEntryReference",
+    "EquityPricingPolicy",
     "Exchange",
     "InstrumentFacts",
     "InstrumentCacheError",
@@ -89,11 +114,13 @@ __all__ = [
     "LoadedInstrumentMaster",
     "NormalizedSignal",
     "OptionType",
+    "OptionEntryPrice",
     "ParsedMessage",
     "ParseReason",
     "PendingGate",
     "ReasonCode",
     "ProcessingResult",
+    "PricingError",
     "RuntimeConfiguration",
     "Segment",
     "SecretValue",
@@ -111,8 +138,11 @@ __all__ = [
     "YahooExchange",
     "YahooFinanceMarketData",
     "configuration_from_mapping",
+    "calculate_option_entry_price",
     "harden_telegram_session",
+    "generate_totp",
     "load_protected_environment",
     "telegram_envelope_from_event",
     "validate_telegram_session",
+    "validate_equity_entry_reference",
 ]

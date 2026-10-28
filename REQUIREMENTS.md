@@ -1,6 +1,6 @@
 # Requirements
 
-Status date: 2026-10-27 (Asia/Kolkata)
+Status date: 2026-10-28 (Asia/Kolkata)
 
 This document separates approved rules from decisions that still require Udit's
 answer. Code must not turn an open decision into an implicit default.
@@ -85,8 +85,12 @@ answer. Code must not turn an open decision into an implicit default.
   Yahoo market timestamp and local receipt timestamp and fail closed on missing,
   malformed, non-positive, or non-unique responses. No other market-data API is
   requested at this stage.
+- When equity is active, setup must explicitly provide the percentage above
+  market, maximum Yahoo market-timestamp age, and maximum local response age.
+  Missing values fail startup; there are no defaults for these open values.
 - Support stock-option `BUY` only. Require a stated price. The upper entry ceiling
-  is that price multiplied by `1.04`; tick handling must never exceed the ceiling.
+  is that price multiplied by `1.04`; round down to a verified price tick so tick
+  handling never exceeds the ceiling.
   Use current calendar month when expiry is omitted and reject unless exactly one
   listed contract matches. No option writing or index options.
 - Stop loss and target are setup values, with the previously chosen defaults of
@@ -117,10 +121,10 @@ answer. Code must not turn an open decision into an implicit default.
    Yahoo officially describes this data as informational and lists BSE as delayed
    by 15 minutes; these limits must be explicit before quote-based entry validation
    can pass.
-3. **Option tick rounding:** approve the exact rule. A safe candidate is to round
-   down to the nearest valid tick so the price never exceeds `signal × 1.04`.
-   Dhan's detailed master currently supplies raw values such as `5.0000`; verify
-   their price-unit conversion from current official/broker guidance before use.
+3. **Option tick units:** floor-to-tick pricing is implemented. Dhan's detailed
+   master currently supplies raw values such as `5.0000`; verify their price-unit
+   conversion from current official/broker guidance before connecting that field
+   to the calculation.
 4. **Sizing priority:** choose fixed shares/lots versus budget when both are
    configured; decide whether insufficient funds always rejects or may reduce
    quantity; define the role of minimum-trade-funds.

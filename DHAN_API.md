@@ -1,6 +1,6 @@
 # Dhan API and regulatory evidence
 
-Reviewed: 2026-10-27 (Asia/Kolkata). No credentialed, broker-write, or live-order
+Reviewed: 2026-10-28 (Asia/Kolkata). No credentialed, broker-write, or live-order
 request was made during this review.
 
 This file records behavior verified from current official sources. It is not an
@@ -26,6 +26,14 @@ An eventual implementation must prevent URLs, headers, exceptions, tracing, and
 proxy/access logs from exposing these values. The 08:00 Asia/Kolkata workflow must
 use the documented expiry, fail closed for new LIVE entries on failure, and retain
 a manual recovery path. No code may assume reauthentication always succeeds.
+
+The implemented adapter generates RFC 6238 SHA-1 six-digit TOTP codes, makes the
+documented POST with a bounded HTTPS response, validates the returned client ID,
+and treats an offset-less `expiryTime` as Asia/Kolkata. It converts transport,
+HTTP, and JSON failures to fixed error codes so credential query values and token
+headers are not copied into logs. The token is held only in memory. Successful
+authentication is followed by the documented read-only `GET /v2/fundlimit` and
+strict client-ID/number validation. No order endpoint is present.
 
 Source: [Dhan authentication](https://dhanhq.co/docs/v2/authentication/)
 
@@ -61,6 +69,11 @@ Yahoo market age and local response age remain required configuration decisions
 before the price gate can pass. This known limitation remains part of the
 pre-LIVE evidence review; it does not trigger work on another API now.
 
+The implemented equity pricing policy requires both age limits and the setup
+percentage, accepts those boundaries inclusively with the approved 2-second
+future tolerance, requires INR, and returns an unrounded LIMIT ceiling. It has no
+fallback price source.
+
 ## Instruments, tick sizes, lots, and MTF
 
 The official instrument master contains fields for security ID, exchange/segment,
@@ -90,7 +103,8 @@ The detailed file returned raw `TICK_SIZE` values such as `5.0000` for those
 option rows and `10.0000` for the reviewed NSE equity row. The official page calls
 the field the minimum decimal point but does not explain the conversion needed by
 order-price units. Codexbot therefore stores `tick_size_raw` and does not use it
-for rounding yet.
+for rounding yet. The independent option-pricing function applies `1.04` and
+rounds down when given an already verified price-unit tick.
 
 The credential-free cache CLI was exercised against the public URL on 27 October
 2026. It downloaded 36,835,408 bytes with SHA-256

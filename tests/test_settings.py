@@ -25,7 +25,7 @@ def valid_values() -> dict[str, str]:
         "TELEGRAM_API_HASH": "telegram-secret-hash",
         "TELEGRAM_SESSION_PATH": "/var/lib/codexbot/udit.session",
         "DHAN_CLIENT_ID": "dhan-client",
-        "DHAN_PIN": "1234",
+        "DHAN_PIN": "123456",
         "DHAN_TOTP_SECRET": "BASE32SECRET",
     }
 
@@ -56,13 +56,35 @@ def test_explicit_live_mode_does_not_create_an_execution_capability() -> None:
     assert not hasattr(configuration, "place_order")
 
 
+def test_active_equity_requires_all_unresolved_setup_price_values() -> None:
+    values = valid_values()
+    values["CODEXBOT_EQUITY_ACTIVE"] = "true"
+
+    with pytest.raises(SettingsError, match="active equity requires"):
+        configuration_from_mapping(values)
+
+    values.update(
+        {
+            "CODEXBOT_EQUITY_PRICE_PERCENTAGE": "1.25",
+            "CODEXBOT_YAHOO_MAX_MARKET_AGE_SECONDS": "5",
+            "CODEXBOT_YAHOO_MAX_LOCAL_AGE_SECONDS": "2",
+        }
+    )
+    configuration = configuration_from_mapping(values)
+    assert str(configuration.settings.equity_price_percentage) == "1.25"
+    assert configuration.settings.yahoo_maximum_market_age is not None
+    assert configuration.settings.yahoo_maximum_local_age is not None
+    assert configuration.settings.yahoo_maximum_market_age.total_seconds() == 5
+    assert configuration.settings.yahoo_maximum_local_age.total_seconds() == 2
+
+
 def test_credentials_never_appear_in_repr_or_string() -> None:
     configuration = configuration_from_mapping(valid_values())
     rendered = repr(configuration)
 
     assert "telegram-secret-hash" not in rendered
     assert "BASE32SECRET" not in rendered
-    assert "1234" not in rendered
+    assert "123456" not in rendered
     assert str(configuration.telegram.api_hash) == "<redacted>"
     assert configuration.telegram.api_hash.reveal() == "telegram-secret-hash"
 
@@ -76,6 +98,7 @@ def test_credentials_never_appear_in_repr_or_string() -> None:
         ("CODEXBOT_LOG_GROUP_ID", "0", "cannot be zero"),
         ("CODEXBOT_INSTRUMENT_MAX_AGE_SECONDS", "0", "must be positive"),
         ("TELEGRAM_API_ID", "not-an-int", "must be an integer"),
+        ("DHAN_PIN", "1234", "6-digit numeric"),
         ("CODEXBOT_MODE", "PAPER", "TEST or LIVE"),
     ],
 )

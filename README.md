@@ -4,9 +4,10 @@ Codexbot is a new single-operator Telegram-to-Dhan trading bot for Udit. The
 repository contains a deterministic signal checker, a SQLite audit/deduplication
 journal, a conservative Telegram text parser, and a read-only Yahoo Finance
 equity quote adapter. A read-only resolver consumes Dhan's official detailed
-instrument-master CSV. A TEST-safe processor composes durable receipt, parsing,
-resolution, checking, audit, and option deduplication. It cannot place broker
-orders, create fills, or simulate holdings.
+instrument-master CSV. Secret-safe Dhan TOTP authentication and a read-only fund
+health probe are implemented. A TEST-safe processor composes durable receipt,
+parsing, resolution, checking, audit, and option deduplication. It cannot place
+broker orders, create fills, or simulate holdings.
 
 ## Current behavior
 
@@ -56,11 +57,24 @@ before activation, stores SHA-256 versioned snapshots with `0600` permissions,
 switches the current pointer atomically, preserves the last-known-good version on
 failure, verifies age/size/checksum when loading, and prunes inactive snapshots.
 
+The pricing layer validates Yahoo's market timestamp and local response timestamp
+against explicit setup limits. It applies the setup percentage without inventing
+a default. For stock options it multiplies the signal upper bound by `1.04` and
+rounds down to a caller-supplied verified tick, so the result cannot exceed the
+ceiling. Dhan's raw tick is not passed into this function until its unit conversion
+is verified.
+
+The Dhan read-only session generates the documented TOTP locally, validates the
+returned client identity and IST expiry, and verifies the session with
+`GET /v2/fundlimit`. Tokens stay in memory and errors never include a
+credential-bearing URL or header. This module has no order endpoint.
+
 Runtime configuration comes from one owner-only regular environment file. The
 loader rejects symlinks, group/world permissions, unknown/duplicate keys, invalid
 IDs, and missing values. Only `CODEXBOT_MODE` defaults, and it defaults to `TEST`;
 equity/F&O activation, groups, source IDs, paths, snapshot age, Telegram values,
-and Dhan TOTP credentials must be explicit. Secret representations are redacted.
+and Dhan TOTP credentials must be explicit. Enabling equity also requires the
+percentage above market and both Yahoo age limits. Secret representations are redacted.
 See [.env.example](.env.example); keep the populated file outside Git with mode
 `0600`.
 
@@ -71,8 +85,8 @@ and never handles edits or deletions. The service refuses interactive login and
 requires an already-authorized owner-only session created during separate setup.
 
 Passing these checks produces `PASSED_CORE`, never “valid order” or “trade
-ready.” Applying the Yahoo quote to an entry, equity price percentage, sizing,
-funds, risk, mode, emergency stop, and broker-reconciliation gates remain
+ready.” The pricing functions are not yet composed into final signal approval;
+sizing, funds, risk, mode, emergency stop, and broker-reconciliation gates remain
 mandatory and are not implemented.
 
 ## Development

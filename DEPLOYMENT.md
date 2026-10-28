@@ -36,6 +36,12 @@ parent directory must be `0700`; the session and SQLite sidecars must be `0600`.
 The session path remains outside the checkout and backup/log collection must
 exclude its contents.
 
+Dhan TOTP authentication can generate a 24-hour token and verify it through the
+read-only fund endpoint. The current adapter keeps that token only in process
+memory. The final service composition must run refresh at the approved calendar
+time, journal only its fixed health result, and block new LIVE entries after any
+failed health check. Failure and holiday semantics remain open.
+
 The runtime database is SQLite in WAL mode. Offline maintenance is exposed as
 `codexbot-db integrity`, `codexbot-db backup`, and `codexbot-db restore-test`.
 Production scheduling, encrypted backup destination, retention, file ownership,

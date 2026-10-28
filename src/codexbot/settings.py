@@ -8,6 +8,7 @@ import stat
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import timedelta
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 from codexbot.models import CheckerPolicy, ExecutionMode
@@ -63,6 +64,9 @@ class BotSettings:
     instrument_cache_directory: Path
     instrument_maximum_age: timedelta
     telegram_session_path: Path
+    equity_price_percentage: Decimal | None = None
+    yahoo_maximum_market_age: timedelta | None = None
+    yahoo_maximum_local_age: timedelta | None = None
 
     def checker_policy(self) -> CheckerPolicy:
         return CheckerPolicy(
@@ -103,9 +107,28 @@ def configuration_from_mapping(values: Mapping[str, str]) -> RuntimeConfiguratio
     except ValueError as error:
         raise SettingsError("CODEXBOT_MODE must be TEST or LIVE") from error
 
+    equity_active = _required_bool(values, "CODEXBOT_EQUITY_ACTIVE")
+    equity_price_percentage = _optional_nonnegative_decimal(
+        values, "CODEXBOT_EQUITY_PRICE_PERCENTAGE"
+    )
+    yahoo_maximum_market_age = _optional_positive_duration(
+        values, "CODEXBOT_YAHOO_MAX_MARKET_AGE_SECONDS"
+    )
+    yahoo_maximum_local_age = _optional_positive_duration(
+        values, "CODEXBOT_YAHOO_MAX_LOCAL_AGE_SECONDS"
+    )
+    if equity_active and (
+        equity_price_percentage is None
+        or yahoo_maximum_market_age is None
+        or yahoo_maximum_local_age is None
+    ):
+        raise SettingsError(
+            "active equity requires price percentage and both Yahoo quote age limits"
+        )
+
     settings = BotSettings(
         mode=mode,
-        equity_active=_required_bool(values, "CODEXBOT_EQUITY_ACTIVE"),
+        equity_active=equity_active,
         fno_active=_required_bool(values, "CODEXBOT_FNO_ACTIVE"),
         allowed_group_ids=_required_id_set(values, "CODEXBOT_GROUP_IDS"),
         authorized_source_ids=_required_id_set(values, "CODEXBOT_AUTHORIZED_SOURCE_IDS"),
@@ -116,15 +139,21 @@ def configuration_from_mapping(values: Mapping[str, str]) -> RuntimeConfiguratio
             seconds=_required_positive_int(values, "CODEXBOT_INSTRUMENT_MAX_AGE_SECONDS")
         ),
         telegram_session_path=_required_path(values, "TELEGRAM_SESSION_PATH"),
+        equity_price_percentage=equity_price_percentage,
+        yahoo_maximum_market_age=yahoo_maximum_market_age,
+        yahoo_maximum_local_age=yahoo_maximum_local_age,
     )
     telegram = TelegramCredentials(
         api_id=_required_positive_int(values, "TELEGRAM_API_ID"),
         api_hash=SecretValue(_required(values, "TELEGRAM_API_HASH")),
         phone_number=_optional_secret(values, "TELEGRAM_PHONE_NUMBER"),
     )
+    dhan_pin = _required(values, "DHAN_PIN")
+    if len(dhan_pin) != 6 or not dhan_pin.isascii() or not dhan_pin.isdigit():
+        raise SettingsError("DHAN_PIN must be a 6-digit numeric code")
     dhan = DhanCredentials(
         client_id=SecretValue(_required(values, "DHAN_CLIENT_ID")),
-        pin=SecretValue(_required(values, "DHAN_PIN")),
+        pin=SecretValue(dhan_pin),
         totp_secret=SecretValue(_required(values, "DHAN_TOTP_SECRET")),
     )
     return RuntimeConfiguration(settings=settings, telegram=telegram, dhan=dhan)
@@ -239,6 +268,27 @@ def _optional_secret(values: Mapping[str, str], name: str) -> SecretValue | None
     return SecretValue(value) if value else None
 
 
+def _optional_nonnegative_decimal(values: Mapping[str, str], name: str) -> Decimal | None:
+    text = values.get(name, "").strip()
+    if not text:
+        return None
+    try:
+        value = Decimal(text)
+    except InvalidOperation as error:
+        raise SettingsError(f"{name} must be a decimal") from error
+    if not value.is_finite() or value < 0:
+        raise SettingsError(f"{name} must be finite and non-negative")
+    return value
+
+
+def _optional_positive_duration(values: Mapping[str, str], name: str) -> timedelta | None:
+    text = values.get(name, "").strip()
+    if not text:
+        return None
+    seconds = _required_positive_int(values, name)
+    return timedelta(seconds=seconds)
+
+
 _ENV_LINE = re.compile(r"(?:export\s+)?(?P<name>[A-Za-z_][A-Za-z0-9_]*)=(?P<value>.*)")
 _KNOWN_KEYS = frozenset(
     {
@@ -251,6 +301,9 @@ _KNOWN_KEYS = frozenset(
         "CODEXBOT_DATABASE_PATH",
         "CODEXBOT_INSTRUMENT_CACHE_DIRECTORY",
         "CODEXBOT_INSTRUMENT_MAX_AGE_SECONDS",
+        "CODEXBOT_EQUITY_PRICE_PERCENTAGE",
+        "CODEXBOT_YAHOO_MAX_MARKET_AGE_SECONDS",
+        "CODEXBOT_YAHOO_MAX_LOCAL_AGE_SECONDS",
         "TELEGRAM_API_ID",
         "TELEGRAM_API_HASH",
         "TELEGRAM_PHONE_NUMBER",

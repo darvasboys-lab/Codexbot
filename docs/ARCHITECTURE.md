@@ -24,10 +24,11 @@ will be a durable gate checked immediately before every new entry. Submission wi
 use a durable intent/correlation record so a timeout triggers reconciliation, not
 blind retry.
 
-The current safe slice ends before pricing an entry, sizing, risk approval, or
-execution. The deterministic checker returns `PASSED_CORE` plus all currently
-known missing gates and can never mark a signal trade-ready. Any requirement found
-later adds a gate; this list is never evidence that order submission is authorized.
+The current safe slice includes standalone deterministic price calculations but
+ends before composing price, sizing, risk approval, or execution into a final
+decision. The checker returns `PASSED_CORE` plus all currently known missing gates
+and can never mark a signal trade-ready. Any later requirement adds a gate; this
+list is never evidence that order submission is authorized.
 
 ## Component boundaries
 
@@ -57,15 +58,18 @@ later adds a gate; this list is never evidence that order submission is authoriz
   byte count, checksum, path form, schema, and rows. Failed refreshes leave the
   prior pointer untouched; pruning retains the active and configured previous
   snapshots.
-- **Dhan account read model:** funds/margins, orders, trades, and positions from
-  documented read-only interfaces.
+- **Dhan authentication and account health:** local TOTP generation, token
+  identity/expiry validation, in-memory token handling, and documented read-only
+  fund-limit verification. Margin, orders, trades, and positions remain planned.
 - **Risk engine:** configured caps and portfolio-aware entry authorization.
 - **Execution/reconciliation:** LIVE-only order intents, duplicate-submission
   controls, state reconciliation, bounded partial-fill retry, and protection
   exits. Dhan correlation IDs are not assumed to provide idempotency.
-- **Yahoo market data:** read-only NSE/BSE equity quote retrieval. Each accepted
+- **Yahoo market data and pricing:** read-only NSE/BSE equity quote retrieval. Each accepted
   response contains a positive price, Yahoo market timestamp, local receipt
-  timestamp, currency, and exchange. Final quote-age limits remain blocked.
+  timestamp, currency, and exchange. A separate policy requires explicit market
+  and local age limits and setup percentage. Option pricing applies the approved
+  4% ceiling and floors to a verified price tick.
 - **Journal:** SQLite WAL database containing immutable first receipts,
   append-only audit facts, and atomic option deduplication decisions. Secrets and
   session material are excluded.
@@ -79,7 +83,8 @@ credentials. The loader requires service-user ownership, a regular non-symlink
 file, and mode `0600` or stricter. It accepts only documented keys and performs no
 shell expansion. TEST is the sole default; both segment flags, source identities,
 paths, instrument age, Telegram credentials/session path, and Dhan TOTP inputs are
-explicit. Secret value objects render only `<redacted>` and require an explicit
+explicit. Active equity also requires both Yahoo age limits and the percentage
+above market. Secret value objects render only `<redacted>` and require an explicit
 adapter call to reveal their value.
 
 ## Telegram session boundary
@@ -152,5 +157,6 @@ exchange controls remain later gates.
 
 The detailed CSV's `TICK_SIZE` is stored as `tick_size_raw`. Current rows contain
 values such as `5.0000` while displayed price limits use decimal rupees. The code
-does not infer a paise/rupee conversion. Tick rounding remains blocked until the
+does not infer a paise/rupee conversion. The price function rounds down and cannot
+exceed the 4% ceiling; wiring this raw field into it remains blocked until the raw
 unit is verified.

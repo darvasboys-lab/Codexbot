@@ -1,6 +1,6 @@
 # Project status
 
-Status date: 2026-10-27 (Asia/Kolkata)
+Status date: 2026-10-28 (Asia/Kolkata)
 
 ## Implemented
 
@@ -20,6 +20,9 @@ Status date: 2026-10-27 (Asia/Kolkata)
   CLI commands.
 - Read-only Yahoo Finance NSE/BSE equity quote adapter with market and receipt
   timestamps, strict response validation, and caller-supplied freshness limits.
+- Fail-closed equity price policy with explicit Yahoo market/local age limits and
+  setup percentage, plus the approved option `1.04` ceiling rounded down to a
+  caller-supplied verified tick.
 - Conservative Telegram parser for the supplied compact option BUY and two EXIT
   forms. It preserves price bounds, month, strike, and CE/PE; ignores Telegram
   SL/target prose; and fails closed for the supplied analysis, watchlist,
@@ -43,9 +46,12 @@ Status date: 2026-10-27 (Asia/Kolkata)
   configured-chat subscription, sender/channel and forwarded-origin extraction,
   hidden-origin rejection support, finite reconnect settings, protected session
   files/sidecars, worker-thread processing, and health/error state.
+- Secret-safe Dhan TOTP generation, access-token response identity/expiry checks,
+  and read-only fund-limit health verification. Tokens remain in memory; the
+  broker module contains no order endpoint.
 - Structured reason codes and explicit remaining-gate list.
-- Structural safety boundary: the package contains no broker client, order model,
-  fill model, holdings model, or simulator; `trade_ready` is always false.
+- Structural safety boundary: the package contains no broker write method, order
+  model, fill model, holdings model, or simulator; `trade_ready` is always false.
 - Automated unit tests for implemented behavior and safety boundaries.
 - Completed reference-archive review with no source reuse; candidate formats,
   conflicts, and rejected legacy behavior are documented.
@@ -65,10 +71,11 @@ Status date: 2026-10-27 (Asia/Kolkata)
 - Production instrument refresh schedule and maximum accepted snapshot age.
 - Interactive Telegram session setup and live credentialed listener verification;
   authenticated operator feedback remains planned.
-- Read-only Dhan funds, margin, order, trade, and position connectivity.
+- Read-only Dhan margin, order, trade, and position connectivity. Token and fund
+  health connectivity is implemented but awaits credentialed verification.
 - Journal orchestration, retention/backup scheduling, and restart reconciliation.
-- Pricing, sizing, funds, risk, emergency-stop, execution, partial-fill/retry, and
-  protection logic.
+- Composition of pricing, sizing, funds/margin, risk, emergency-stop, execution,
+  partial-fill/retry, and protection logic.
 - 08:00 Asia/Kolkata health/token workflow and exchange calendar.
 - SSH terminal dashboard, Google Cloud Logging, Docker, and new GCE deployment.
 - Any `LIVE` order path or live test.
@@ -77,7 +84,8 @@ Status date: 2026-10-27 (Asia/Kolkata)
 
 - `darvas_script-main.zip` was reviewed by SHA-256; no source file or unapproved
   rule was reused.
-- No Dhan or Telegram credential has been requested, stored, or tested.
+- No Dhan or Telegram credential has been requested, stored, or tested. Dhan
+  authentication and fund parsing use injected transports in automated tests.
 - `.env.example` contains names and blank credential fields only; populated
   runtime settings remain excluded from Git.
 - Yahoo integration is covered by injected-response unit tests. A read-only

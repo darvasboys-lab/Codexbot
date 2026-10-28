@@ -49,8 +49,13 @@ separately approved live test.
   origins, missing sender identity, session file/directory permission checks,
   sidecar hardening, unauthorized-session refusal, authorized lifecycle cleanup,
   and NewMessage-only registration with a fake client.
+- Verify TOTP against an RFC vector, naive IST token expiry, response client ID,
+  token expiry, secret-free HTTP errors, strict fund-limit fields, and that the
+  Dhan adapter exposes no write endpoint.
+- Verify inclusive Yahoo market/local age limits, 2-second future tolerance, INR,
+  setup percentage calculation, option 4% ceiling, and floor-to-tick behavior.
 
-Current result: 128 tests pass. Ruff and strict mypy pass.
+Current result: 155 tests pass. Ruff and strict mypy pass.
 
 ## 2. Remaining parser and reference-rule tests
 
