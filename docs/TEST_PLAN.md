@@ -51,7 +51,9 @@ separately approved live test.
   sidecar hardening, unauthorized-session refusal, authorized lifecycle cleanup,
   and NewMessage-only registration with a fake client.
 
-Current PR: 130 tests pass (128 baseline plus two replay-safety regressions); Ruff and strict mypy pass in GitHub Actions. See PR #1 CI checks.
+Current stacked PR: 137 tests (128 baseline, two replay-safety regressions,
+and seven read-only restart-audit tests). Ruff, strict mypy, and pytest passed
+in GitHub Actions for PR #2 (run 40614132265).
 
 ## 2. Remaining parser and reference-rule tests
 
