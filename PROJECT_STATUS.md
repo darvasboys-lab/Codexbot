@@ -51,6 +51,9 @@ Status date: 2026-10-28 (Asia/Kolkata)
   configured-chat subscription, sender/channel and forwarded-origin extraction,
   hidden-origin rejection support, finite reconnect settings, protected session
   files/sidecars, worker-thread processing, and health/error state.
+- Attended `codexbot-telegram-auth` session creation that reads the protected
+  environment, disconnects after authorization, and reapplies owner-only session
+  permissions; unattended listener startup still refuses interactive login.
 - Default plain-text log-group result/error reporting without raw message or
   exception text, explicit no-broker-action labeling, and audit-derived
   Asia/Kolkata daily summary counts.

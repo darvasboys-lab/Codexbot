@@ -19,6 +19,7 @@ codexbot-instruments = "codexbot.instrument_maintenance:main"
 codexbot-admin = "codexbot.admin:main"
 codexbot-calendar = "codexbot.calendar_maintenance:main"
 codexbot-listener = "codexbot.runtime:main"
+codexbot-telegram-auth = "codexbot.telegram_auth:main"
 
 [project.optional-dependencies]
 dev = [

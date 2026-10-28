@@ -46,6 +46,9 @@ write executor is absent. [deploy/codexbot.service.example](deploy/codexbot.serv
 is a hardened review-only systemd template; it has not been copied, enabled, or
 used on a VM. Timer templates are deliberately absent until their unresolved
 ages, missed-run, retry, notification, backup, and retention policies are supplied.
+The separate `codexbot-telegram-auth --environment <protected-file>` command is
+the only supported interactive session-creation path and must run attended as
+the service user before the listener starts.
 
 Runtime values will live in one protected environment file readable only by the
 service account. Telegram session files and durable state will live outside the

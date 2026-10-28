@@ -35,7 +35,7 @@ are tracked separately so offline tests cannot be mistaken for deployment proof.
 - Python 3.12 locked environment: passing.
 - Ruff: passing.
 - Strict mypy: passing.
-- Automated tests: 263 passing.
+- Automated tests: 265 passing.
 - GitHub CI: required for every push to `main`.
 - Broker write methods: absent.
 - Paper trading and simulated portfolio state: absent.

@@ -182,8 +182,13 @@ caches, and completing operator-attended Telegram authorization, start the
 current observation service with:
 
 ```bash
+codexbot-telegram-auth --environment /etc/codexbot/codexbot.env
 codexbot-listener --environment /etc/codexbot/codexbot.env
 ```
+
+Run `codexbot-telegram-auth` only in an attended terminal as the `codexbot`
+service user. It reads API values from the protected environment, prompts through
+Telethon when needed, disconnects, and reapplies `0600` session permissions.
 
 This entrypoint is intentionally TEST-only and exits with `LIVE_EXECUTOR_ABSENT`
 for `CODEXBOT_MODE=LIVE`. It assembles the durable journal, parser, checker,

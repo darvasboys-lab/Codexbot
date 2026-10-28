@@ -27,6 +27,9 @@ answer. Code must not turn an open decision into an implicit default.
   unattended startup. Protect the session directory and session/journal/WAL/SHM
   files with owner-only permissions. Preserve marked Telegram IDs and forwarded
   origins for audit even though signal authorization is group-only.
+- Provide a separate operator-attended Telegram authorization command that reads
+  credentials from the protected environment, never command-line arguments,
+  disconnects after authorization, and hardens the resulting session files.
 - Process only `BUY` initially. Classify and log `SELL`/`EXIT` without execution.
   Ignore edits/deletions after processing.
 - Recognize the supplied compact stock-option form

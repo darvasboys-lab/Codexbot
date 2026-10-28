@@ -98,7 +98,7 @@ separately approved live test.
   it refuses mismatched project, instance, zone, and OS metadata. Validate systemd
   units before installation and confirm no new listening socket appears afterward.
 
-Current result: 263 tests pass. Ruff and strict mypy pass.
+Current result: 265 tests pass. Ruff and strict mypy pass.
 
 ## 2. Remaining parser and reference-rule tests
 
