@@ -17,3 +17,4 @@ Status date: 2026-10-28 (Asia/Kolkata)
 | VM/SQLite loss or corruption | WAL, short transactions, integrity/backup/restore commands, encrypted scheduled backups, restore drills, disk alerts | Core tooling implemented; VM operations open |
 | Emergency stop gives false safety | Append-only fail-closed entry gate is checked before deduplication; future write adapter must cancel/reconcile pending entries and separately authenticate close action | Entry gate implemented; broker actions blocked |
 | Broker/API behavior changes | Pin tested client behavior, monitor official release notes, contract-test read APIs, reverify before LIVE | Ongoing |
+| Health display creates false LIVE confidence | Separate observation health from LIVE capability; include stop and executor state; never log credentials or funds in the health audit | Implemented; notification policy open |

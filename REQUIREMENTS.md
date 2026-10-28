@@ -146,7 +146,8 @@ answer. Code must not turn an open decision into an implicit default.
 11. **Calendar and 08:00 health check:** use weekdays or the official exchange
     trading calendar; define late/missed checks, token-refresh failure, service
     failure, and notification retry semantics. Automatic reauthentication is not
-    assumed.
+    assumed. The fixed 08:00 Asia/Kolkata instant and one-shot redacted component
+    health audit are implemented without selecting these open policies.
 12. **AI review:** choose which filtered chatter/rejections invoke AI, provider,
     data policy, cost ceiling, latency deadline, timeout behavior, and authorized
     feedback commands.

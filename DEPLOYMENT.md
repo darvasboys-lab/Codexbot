@@ -42,6 +42,12 @@ memory. The final service composition must run refresh at the approved calendar
 time, journal only its fixed health result, and block new LIVE entries after any
 failed health check. Failure and holiday semantics remain open.
 
+The one-shot coordinator and exact 08:00 Asia/Kolkata conversion are implemented.
+It audits component/error codes, token expiry, stop state, and the absent executor
+without recording the token, credentials, account balance, or Telegram content.
+The VM timer must remain disabled until the official calendar, missed-run, retry,
+and log-group notification behavior is approved.
+
 The runtime database is SQLite in WAL mode. Offline maintenance is exposed as
 `codexbot-db integrity`, `codexbot-db backup`, and `codexbot-db restore-test`.
 Production scheduling, encrypted backup destination, retention, file ownership,

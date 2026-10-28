@@ -78,6 +78,10 @@ list is never evidence that order submission is authorized.
   Secrets and session material are excluded.
 - **Admin CLI:** status, effective settings (redacted), orders, positions, errors,
   service control, emergency stop, and separately confirmed close action over SSH.
+- **Health coordinator:** composes Telegram, Dhan token/fund, SQLite integrity,
+  emergency-stop, mode, and executor state into a redacted audit event. The
+  executor is explicitly absent, so LIVE capability is always false. Scheduling
+  policy remains outside this component; it only defines 08:00 Asia/Kolkata.
 
 ## Configuration boundary
 

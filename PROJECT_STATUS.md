@@ -54,6 +54,9 @@ Status date: 2026-10-28 (Asia/Kolkata)
 - Strict read-only Dhan order-book, trade-book, and position snapshots for future
   restart/uncertain-state reconciliation, including partial quantities, prices,
   identity checks, and position quantity consistency.
+- Secret-free system health composition for Telegram, Dhan token/funds, SQLite
+  integrity, emergency-stop state, and absent executor; fixed 08:00
+  Asia/Kolkata schedule calculation and append-only health audit.
 - Structured reason codes and explicit remaining-gate list.
 - Structural safety boundary: the package contains no broker write method, order
   model, fill model, holdings model, or simulator; `trade_ready` is always false.
@@ -81,7 +84,8 @@ Status date: 2026-10-28 (Asia/Kolkata)
 - Journal retention/backup scheduling and restart reconciliation.
 - Composition of pricing, sizing, funds/margin, risk, pending-entry cancellation, execution,
   partial-fill/retry, and protection logic.
-- 08:00 Asia/Kolkata health/token workflow and exchange calendar.
+- Exchange calendar, missed/late 08:00 behavior, health retries, and notification
+  delivery. The one-shot health/token composition and fixed time are implemented.
 - SSH terminal dashboard, Google Cloud Logging, Docker, and new GCE deployment.
 - Any `LIVE` order path or live test.
 

@@ -92,6 +92,13 @@ sender/channel, and forward-origin IDs, hands the event to durable processing,
 and never handles edits or deletions. The service refuses interactive login and
 requires an already-authorized owner-only session created during separate setup.
 
+The runtime health coordinator refreshes Dhan authentication and combines the
+read-only broker probe with Telegram connection/authorization, SQLite integrity,
+emergency-stop state, and executor availability. It writes one secret-free audit
+event. Its schedule helper fixes the target at 08:00 Asia/Kolkata; exchange-day,
+late-run, retry, and notification policies remain explicit open inputs. Because
+the write executor is absent, health can never report LIVE entry capability.
+
 Passing these checks produces `PASSED_CORE`, never “valid order” or “trade
 ready.” The pricing functions are not yet composed into final signal approval;
 sizing, funds, risk, mode, emergency stop, and broker-reconciliation gates remain
