@@ -1,6 +1,7 @@
 import sqlite3
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 from pathlib import Path
 
 import pytest
@@ -8,6 +9,10 @@ import pytest
 from codexbot import (
     Action,
     CheckerPolicy,
+    DhanOrderSnapshot,
+    DhanPositionSnapshot,
+    DhanReconciliationSnapshot,
+    DhanTradeSnapshot,
     InstrumentFacts,
     InstrumentKind,
     NormalizedSignal,
@@ -250,3 +255,122 @@ def test_integrity_backup_and_restore_test(tmp_path: Path) -> None:
     assert restore_test(backup_path) == ("ok",)
     with pytest.raises(FileExistsError):
         backup_database(database_path, backup_path)
+
+
+def test_real_broker_snapshot_is_atomic_append_only_evidence(tmp_path: Path) -> None:
+    database_path = tmp_path / "codexbot.sqlite3"
+    journal = SQLiteJournal(database_path, clock=lambda: NOW)
+    journal.initialize()
+    snapshot = DhanReconciliationSnapshot(
+        orders=(
+            DhanOrderSnapshot(
+                order_id="order-1",
+                correlation_id="codexbot-1",
+                order_status="PART_TRADED",
+                transaction_type="BUY",
+                exchange_segment="NSE_EQ",
+                product_type="CNC",
+                order_type="LIMIT",
+                trading_symbol="TCS",
+                security_id="11536",
+                quantity=40,
+                remaining_quantity=25,
+                filled_quantity=15,
+                average_traded_price=Decimal("3345.8"),
+                received_at=NOW,
+            ),
+        ),
+        trades=(
+            DhanTradeSnapshot(
+                order_id="order-1",
+                exchange_order_id="exchange-order-1",
+                exchange_trade_id="trade-1",
+                transaction_type="BUY",
+                exchange_segment="NSE_EQ",
+                product_type="CNC",
+                order_type="LIMIT",
+                trading_symbol="TCS",
+                security_id="11536",
+                traded_quantity=15,
+                traded_price=Decimal("3345.8"),
+                exchange_time="2026-10-28 09:20:06",
+                received_at=NOW,
+            ),
+        ),
+        positions=(
+            DhanPositionSnapshot(
+                trading_symbol="TCS",
+                security_id="11536",
+                position_type="LONG",
+                exchange_segment="NSE_EQ",
+                product_type="CNC",
+                buy_average=Decimal("3345.8"),
+                buy_quantity=15,
+                sell_average=Decimal("0"),
+                sell_quantity=0,
+                net_quantity=15,
+                realized_profit=Decimal("0"),
+                unrealized_profit=Decimal("10.5"),
+                received_at=NOW,
+            ),
+        ),
+        started_at=NOW - timedelta(milliseconds=100),
+        completed_at=NOW,
+    )
+
+    status = journal.record_broker_reconciliation_snapshot(snapshot)
+
+    assert status.order_count == 1
+    assert status.trade_count == 1
+    assert status.position_count == 1
+    assert journal.latest_broker_snapshot_status() == status
+    with sqlite3.connect(database_path) as connection:
+        assert connection.execute("SELECT COUNT(*) FROM broker_order_observations").fetchone() == (
+            1,
+        )
+        assert connection.execute("SELECT COUNT(*) FROM broker_trade_observations").fetchone() == (
+            1,
+        )
+        assert connection.execute(
+            "SELECT COUNT(*) FROM broker_position_observations"
+        ).fetchone() == (1,)
+        with pytest.raises(sqlite3.IntegrityError, match="append-only"):
+            connection.execute("DELETE FROM broker_order_observations")
+
+
+def test_invalid_broker_snapshot_rolls_back_every_item(tmp_path: Path) -> None:
+    database_path = tmp_path / "codexbot.sqlite3"
+    journal = SQLiteJournal(database_path, clock=lambda: NOW)
+    journal.initialize()
+    duplicate = DhanOrderSnapshot(
+        order_id="duplicate",
+        correlation_id=None,
+        order_status="PENDING",
+        transaction_type="BUY",
+        exchange_segment="NSE_EQ",
+        product_type="CNC",
+        order_type="LIMIT",
+        trading_symbol=None,
+        security_id="11536",
+        quantity=1,
+        remaining_quantity=1,
+        filled_quantity=0,
+        average_traded_price=Decimal("0"),
+        received_at=NOW,
+    )
+    snapshot = DhanReconciliationSnapshot(
+        orders=(duplicate, duplicate),
+        trades=(),
+        positions=(),
+        started_at=NOW,
+        completed_at=NOW,
+    )
+
+    with pytest.raises(sqlite3.IntegrityError):
+        journal.record_broker_reconciliation_snapshot(snapshot)
+
+    assert journal.latest_broker_snapshot_status() is None
+    with sqlite3.connect(database_path) as connection:
+        assert connection.execute(
+            "SELECT COUNT(*) FROM broker_reconciliation_snapshots"
+        ).fetchone() == (0,)

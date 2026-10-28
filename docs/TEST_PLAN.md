@@ -57,12 +57,15 @@ separately approved live test.
 - Verify strict order/trade/position list shape, account identity, quantities,
   positive trade prices, signed P&L, position arithmetic, blank documented order
   symbols, and the explicitly non-atomic combined reconciliation snapshot.
+- Verify a completed real-broker snapshot persists all observation items in one
+  transaction, rolls back on any invalid duplicate, remains append-only, survives
+  backup validation, and appears only as counts/times in local status.
 - Verify 08:00 Asia/Kolkata conversion, redacted component health audit, TEST
   observation health, and explicit false LIVE capability when no executor exists.
 - Verify inclusive Yahoo market/local age limits, 2-second future tolerance, INR,
   setup percentage calculation, option 4% ceiling, and floor-to-tick behavior.
 
-Current result: 175 tests pass. Ruff and strict mypy pass.
+Current result: 178 tests pass. Ruff and strict mypy pass.
 
 ## 2. Remaining parser and reference-rule tests
 

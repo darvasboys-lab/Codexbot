@@ -100,3 +100,18 @@ def test_admin_cli_changes_and_displays_durable_stop(
     assert engaged["emergency_stop"] == "ENGAGED"
     assert engaged["new_entries_allowed"] is False
     assert engaged["pending_entry_cancellation"] == "REQUIRED_WHEN_PENDING_ENTRIES_EXIST"
+
+
+def test_admin_status_is_read_only_summary_without_fake_portfolio(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    database = tmp_path / "codexbot.sqlite3"
+
+    assert main(["status", "--database", str(database)]) == 0
+
+    status = json.loads(capsys.readouterr().out)
+    assert status["journal_mode"] == "wal"
+    assert status["write_executor"] == "ABSENT"
+    assert status["broker_snapshot"] is None
+    assert status["emergency_stop"]["emergency_stop"] == "ENGAGED"
+    assert "simulated" not in json.dumps(status).lower()

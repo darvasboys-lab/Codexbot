@@ -109,6 +109,9 @@ answer. Code must not turn an open decision into an implicit default.
   quantity only after confirming the original remainder is cancelled.
 - Log recognized, rejected/filtered messages and reasons, validations, orders,
   errors, and a daily summary. Preserve an authenticated, immutable audit trail.
+- Persist only actual Dhan order/trade/position reads as broker observations.
+  Store each three-resource snapshot atomically and append-only; TEST must never
+  populate these tables with invented or simulated state.
 - Protect credentials and Telegram session data. Never commit either.
 - Exclude Notion, Google Sheets, Kite, Railway, other brokers, and changes to the
   existing deployment.

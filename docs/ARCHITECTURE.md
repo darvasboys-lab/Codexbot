@@ -62,7 +62,8 @@ list is never evidence that order submission is authorized.
   identity/expiry validation, in-memory token handling, and documented read-only
   fund-limit verification. Strict order, trade, and position snapshots provide
   the broker side of later reconciliation. Their combined view is non-atomic and
-  cannot itself authorize a retry or exit. Margin remains planned.
+  cannot itself authorize a retry or exit. A completed combined view is then
+  persisted atomically in append-only observation tables. Margin remains planned.
 - **Risk engine:** configured caps and portfolio-aware entry authorization.
 - **Execution/reconciliation:** LIVE-only order intents, duplicate-submission
   controls, state reconciliation, bounded partial-fill retry, and protection
@@ -78,6 +79,8 @@ list is never evidence that order submission is authorized.
   Secrets and session material are excluded.
 - **Admin CLI:** status, effective settings (redacted), orders, positions, errors,
   service control, emergency stop, and separately confirmed close action over SSH.
+  The implemented status shows WAL, emergency stop, latest real-broker snapshot
+  counts/time, and absent write executor; richer views remain planned.
 - **Health coordinator:** composes Telegram, Dhan token/fund, SQLite integrity,
   emergency-stop, mode, and executor state into a redacted audit event. The
   executor is explicitly absent, so LIVE capability is always false. Scheduling

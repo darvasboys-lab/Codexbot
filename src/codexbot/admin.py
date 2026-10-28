@@ -15,6 +15,8 @@ from codexbot.persistence import EmergencyStopStatus, SQLiteJournal
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
+    status_parser = subparsers.add_parser("status", help="show durable local runtime state")
+    status_parser.add_argument("--database", type=Path, required=True)
     stop_parser = subparsers.add_parser(
         "emergency-stop", help="inspect or change the durable new-entry gate"
     )
@@ -27,11 +29,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     release_parser.add_argument("--reason", required=True)
 
     arguments = parser.parse_args(argv)
-    if arguments.command != "emergency-stop":
-        parser.error("unknown command")
-
     journal = SQLiteJournal(arguments.database)
     journal.initialize()
+    if arguments.command == "status":
+        print(json.dumps(_system_status_payload(journal), sort_keys=True, separators=(",", ":")))
+        return 0
+    if arguments.command != "emergency-stop":
+        parser.error("unknown command")
     if arguments.action == "status":
         status = journal.emergency_stop_status()
     elif arguments.action in {"engage", "release"}:
@@ -67,6 +71,27 @@ def _status_payload(status: EmergencyStopStatus) -> dict[str, object]:
         else "NOT_REQUESTED",
         "position_management": "MUST_CONTINUE",
         "reason": status.reason,
+    }
+
+
+def _system_status_payload(journal: SQLiteJournal) -> dict[str, object]:
+    broker = journal.latest_broker_snapshot_status()
+    return {
+        "broker_snapshot": (
+            {
+                "completed_at": broker.completed_at.isoformat(),
+                "order_count": broker.order_count,
+                "position_count": broker.position_count,
+                "recorded_at": broker.recorded_at.isoformat(),
+                "snapshot_id": broker.snapshot_id,
+                "trade_count": broker.trade_count,
+            }
+            if broker is not None
+            else None
+        ),
+        "emergency_stop": _status_payload(journal.emergency_stop_status()),
+        "journal_mode": journal.journal_mode(),
+        "write_executor": "ABSENT",
     }
 
 

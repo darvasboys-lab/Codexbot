@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from codexbot.dhan import DhanReconciliationSnapshot
     from codexbot.models import CheckReport
 
 _DUPLICATE_WINDOW = timedelta(seconds=20)
@@ -27,6 +28,10 @@ _REQUIRED_TABLES = frozenset(
         "option_duplicate_claims",
         "option_duplicate_decisions",
         "runtime_control_events",
+        "broker_reconciliation_snapshots",
+        "broker_order_observations",
+        "broker_trade_observations",
+        "broker_position_observations",
     }
 )
 
@@ -62,6 +67,19 @@ class EmergencyStopStatus:
     @property
     def new_entries_allowed(self) -> bool:
         return not self.engaged
+
+
+@dataclass(frozen=True, slots=True)
+class BrokerSnapshotStatus:
+    """Summary of one durable, real broker read observation."""
+
+    snapshot_id: int
+    started_at: datetime
+    completed_at: datetime
+    recorded_at: datetime
+    order_count: int
+    trade_count: int
+    position_count: int
 
 
 class SQLiteJournal:
@@ -455,6 +473,167 @@ class SQLiteJournal:
             event_id=event_id,
         )
 
+    def record_broker_reconciliation_snapshot(
+        self, snapshot: DhanReconciliationSnapshot
+    ) -> BrokerSnapshotStatus:
+        """Atomically persist one real read-only Dhan observation and its items."""
+
+        started_at = _aware_utc(snapshot.started_at)
+        completed_at = _aware_utc(snapshot.completed_at)
+        if completed_at < started_at:
+            raise ValueError("broker snapshot completion cannot precede its start")
+        recorded_at = self._now()
+        with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            cursor = connection.execute(
+                """
+                INSERT INTO broker_reconciliation_snapshots (
+                    started_at, completed_at, recorded_at,
+                    order_count, trade_count, position_count
+                ) VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    _datetime_text(started_at),
+                    _datetime_text(completed_at),
+                    _datetime_text(recorded_at),
+                    len(snapshot.orders),
+                    len(snapshot.trades),
+                    len(snapshot.positions),
+                ),
+            )
+            snapshot_id = _last_row_id(cursor)
+            for order in snapshot.orders:
+                connection.execute(
+                    """
+                    INSERT INTO broker_order_observations (
+                        snapshot_id, order_id, correlation_id, order_status,
+                        transaction_type, exchange_segment, product_type,
+                        order_type, trading_symbol, security_id, quantity,
+                        remaining_quantity, filled_quantity,
+                        average_traded_price, received_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        snapshot_id,
+                        order.order_id,
+                        order.correlation_id,
+                        order.order_status,
+                        order.transaction_type,
+                        order.exchange_segment,
+                        order.product_type,
+                        order.order_type,
+                        order.trading_symbol,
+                        order.security_id,
+                        order.quantity,
+                        order.remaining_quantity,
+                        order.filled_quantity,
+                        str(order.average_traded_price),
+                        _datetime_text(order.received_at),
+                    ),
+                )
+            for trade in snapshot.trades:
+                connection.execute(
+                    """
+                    INSERT INTO broker_trade_observations (
+                        snapshot_id, order_id, exchange_order_id,
+                        exchange_trade_id, transaction_type, exchange_segment,
+                        product_type, order_type, trading_symbol, security_id,
+                        traded_quantity, traded_price, exchange_time, received_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        snapshot_id,
+                        trade.order_id,
+                        trade.exchange_order_id,
+                        trade.exchange_trade_id,
+                        trade.transaction_type,
+                        trade.exchange_segment,
+                        trade.product_type,
+                        trade.order_type,
+                        trade.trading_symbol,
+                        trade.security_id,
+                        trade.traded_quantity,
+                        str(trade.traded_price),
+                        trade.exchange_time,
+                        _datetime_text(trade.received_at),
+                    ),
+                )
+            for position in snapshot.positions:
+                connection.execute(
+                    """
+                    INSERT INTO broker_position_observations (
+                        snapshot_id, trading_symbol, security_id, position_type,
+                        exchange_segment, product_type, buy_average, buy_quantity,
+                        sell_average, sell_quantity, net_quantity, realized_profit,
+                        unrealized_profit, received_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        snapshot_id,
+                        position.trading_symbol,
+                        position.security_id,
+                        position.position_type,
+                        position.exchange_segment,
+                        position.product_type,
+                        str(position.buy_average),
+                        position.buy_quantity,
+                        str(position.sell_average),
+                        position.sell_quantity,
+                        position.net_quantity,
+                        str(position.realized_profit),
+                        str(position.unrealized_profit),
+                        _datetime_text(position.received_at),
+                    ),
+                )
+            self._append_audit_event(
+                connection,
+                event_type="BROKER_RECONCILIATION_OBSERVED",
+                entity_type="broker_snapshot",
+                entity_id=str(snapshot_id),
+                state="DURABLE",
+                details={
+                    "order_count": len(snapshot.orders),
+                    "position_count": len(snapshot.positions),
+                    "trade_count": len(snapshot.trades),
+                },
+                occurred_at=recorded_at,
+            )
+            connection.commit()
+        return BrokerSnapshotStatus(
+            snapshot_id=snapshot_id,
+            started_at=started_at,
+            completed_at=completed_at,
+            recorded_at=recorded_at,
+            order_count=len(snapshot.orders),
+            trade_count=len(snapshot.trades),
+            position_count=len(snapshot.positions),
+        )
+
+    def latest_broker_snapshot_status(self) -> BrokerSnapshotStatus | None:
+        """Return only non-secret counts and times for the newest observation."""
+
+        with self._connect() as connection:
+            row = connection.execute(
+                """
+                SELECT id, started_at, completed_at, recorded_at,
+                       order_count, trade_count, position_count
+                FROM broker_reconciliation_snapshots
+                ORDER BY id DESC
+                LIMIT 1
+                """
+            ).fetchone()
+        if row is None:
+            return None
+        return BrokerSnapshotStatus(
+            snapshot_id=int(row["id"]),
+            started_at=_parse_datetime(str(row["started_at"])),
+            completed_at=_parse_datetime(str(row["completed_at"])),
+            recorded_at=_parse_datetime(str(row["recorded_at"])),
+            order_count=int(row["order_count"]),
+            trade_count=int(row["trade_count"]),
+            position_count=int(row["position_count"]),
+        )
+
     def _connect(self) -> sqlite3.Connection:
         connection = sqlite3.connect(self._path, isolation_level=None)
         connection.row_factory = sqlite3.Row
@@ -657,6 +836,74 @@ CREATE TABLE IF NOT EXISTS runtime_control_events (
     actor TEXT NOT NULL CHECK (length(actor) BETWEEN 1 AND 200)
 );
 
+CREATE TABLE IF NOT EXISTS broker_reconciliation_snapshots (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    started_at TEXT NOT NULL,
+    completed_at TEXT NOT NULL,
+    recorded_at TEXT NOT NULL,
+    order_count INTEGER NOT NULL CHECK (order_count >= 0),
+    trade_count INTEGER NOT NULL CHECK (trade_count >= 0),
+    position_count INTEGER NOT NULL CHECK (position_count >= 0)
+);
+
+CREATE TABLE IF NOT EXISTS broker_order_observations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    snapshot_id INTEGER NOT NULL REFERENCES broker_reconciliation_snapshots(id),
+    order_id TEXT NOT NULL,
+    correlation_id TEXT,
+    order_status TEXT NOT NULL,
+    transaction_type TEXT NOT NULL,
+    exchange_segment TEXT NOT NULL,
+    product_type TEXT NOT NULL,
+    order_type TEXT NOT NULL,
+    trading_symbol TEXT,
+    security_id TEXT NOT NULL,
+    quantity INTEGER NOT NULL CHECK (quantity >= 0),
+    remaining_quantity INTEGER NOT NULL CHECK (remaining_quantity >= 0),
+    filled_quantity INTEGER NOT NULL CHECK (filled_quantity >= 0),
+    average_traded_price TEXT NOT NULL,
+    received_at TEXT NOT NULL,
+    UNIQUE (snapshot_id, order_id)
+);
+
+CREATE TABLE IF NOT EXISTS broker_trade_observations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    snapshot_id INTEGER NOT NULL REFERENCES broker_reconciliation_snapshots(id),
+    order_id TEXT NOT NULL,
+    exchange_order_id TEXT NOT NULL,
+    exchange_trade_id TEXT NOT NULL,
+    transaction_type TEXT NOT NULL,
+    exchange_segment TEXT NOT NULL,
+    product_type TEXT NOT NULL,
+    order_type TEXT NOT NULL,
+    trading_symbol TEXT NOT NULL,
+    security_id TEXT NOT NULL,
+    traded_quantity INTEGER NOT NULL CHECK (traded_quantity > 0),
+    traded_price TEXT NOT NULL,
+    exchange_time TEXT NOT NULL,
+    received_at TEXT NOT NULL,
+    UNIQUE (snapshot_id, exchange_trade_id)
+);
+
+CREATE TABLE IF NOT EXISTS broker_position_observations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    snapshot_id INTEGER NOT NULL REFERENCES broker_reconciliation_snapshots(id),
+    trading_symbol TEXT NOT NULL,
+    security_id TEXT NOT NULL,
+    position_type TEXT NOT NULL,
+    exchange_segment TEXT NOT NULL,
+    product_type TEXT NOT NULL,
+    buy_average TEXT NOT NULL,
+    buy_quantity INTEGER NOT NULL CHECK (buy_quantity >= 0),
+    sell_average TEXT NOT NULL,
+    sell_quantity INTEGER NOT NULL CHECK (sell_quantity >= 0),
+    net_quantity INTEGER NOT NULL,
+    realized_profit TEXT NOT NULL,
+    unrealized_profit TEXT NOT NULL,
+    received_at TEXT NOT NULL,
+    UNIQUE (snapshot_id, exchange_segment, product_type, security_id)
+);
+
 CREATE TRIGGER IF NOT EXISTS audit_events_no_update
 BEFORE UPDATE ON audit_events
 BEGIN
@@ -715,5 +962,53 @@ CREATE TRIGGER IF NOT EXISTS runtime_control_no_delete
 BEFORE DELETE ON runtime_control_events
 BEGIN
     SELECT RAISE(ABORT, 'runtime_control_events is append-only');
+END;
+
+CREATE TRIGGER IF NOT EXISTS broker_snapshots_no_update
+BEFORE UPDATE ON broker_reconciliation_snapshots
+BEGIN
+    SELECT RAISE(ABORT, 'broker_reconciliation_snapshots is append-only');
+END;
+
+CREATE TRIGGER IF NOT EXISTS broker_snapshots_no_delete
+BEFORE DELETE ON broker_reconciliation_snapshots
+BEGIN
+    SELECT RAISE(ABORT, 'broker_reconciliation_snapshots is append-only');
+END;
+
+CREATE TRIGGER IF NOT EXISTS broker_orders_no_update
+BEFORE UPDATE ON broker_order_observations
+BEGIN
+    SELECT RAISE(ABORT, 'broker_order_observations is append-only');
+END;
+
+CREATE TRIGGER IF NOT EXISTS broker_orders_no_delete
+BEFORE DELETE ON broker_order_observations
+BEGIN
+    SELECT RAISE(ABORT, 'broker_order_observations is append-only');
+END;
+
+CREATE TRIGGER IF NOT EXISTS broker_trades_no_update
+BEFORE UPDATE ON broker_trade_observations
+BEGIN
+    SELECT RAISE(ABORT, 'broker_trade_observations is append-only');
+END;
+
+CREATE TRIGGER IF NOT EXISTS broker_trades_no_delete
+BEFORE DELETE ON broker_trade_observations
+BEGIN
+    SELECT RAISE(ABORT, 'broker_trade_observations is append-only');
+END;
+
+CREATE TRIGGER IF NOT EXISTS broker_positions_no_update
+BEFORE UPDATE ON broker_position_observations
+BEGIN
+    SELECT RAISE(ABORT, 'broker_position_observations is append-only');
+END;
+
+CREATE TRIGGER IF NOT EXISTS broker_positions_no_delete
+BEFORE DELETE ON broker_position_observations
+BEGIN
+    SELECT RAISE(ABORT, 'broker_position_observations is append-only');
 END;
 """

@@ -58,6 +58,9 @@ starts engaged, and every release/engage action records local OS user identity,
 reason, and time in append-only control and audit rows. Systemd permissions must
 limit this command to the operator service account. Broker cancellation and
 position management are still absent and cannot be inferred from this entry gate.
+`codexbot-admin status` adds WAL mode and latest real-broker observation counts
+and times without printing credentials, access tokens, balances, order details,
+or position values.
 
 The implemented cache stores Dhan's public detailed master as validated SHA-256
 snapshots and atomically switches a current pointer while preserving last-known-good

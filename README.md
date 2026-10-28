@@ -77,6 +77,12 @@ of today's orders/trades and current positions for reconciliation. The combined
 snapshot is marked non-atomic because those are sequential HTTP reads. This module
 has no broker write endpoint.
 
+One complete read snapshot can be committed atomically to append-only SQLite
+observation tables. These rows are explicitly real broker observations; they are
+never created in TEST without a Dhan response and never represent simulated
+orders, fills, holdings, or positions. The local admin status reports only the
+latest snapshot time/counts, stop state, WAL mode, and absent write executor.
+
 Runtime configuration comes from one owner-only regular environment file. The
 loader rejects symlinks, group/world permissions, unknown/duplicate keys, invalid
 IDs, and missing values. Only `CODEXBOT_MODE` defaults, and it defaults to `TEST`;
@@ -127,6 +133,7 @@ uv run --frozen codexbot-instruments --cache-directory data/instruments prune --
 uv run --frozen codexbot-admin emergency-stop --database data/codexbot.sqlite3 status
 uv run --frozen codexbot-admin emergency-stop --database data/codexbot.sqlite3 engage --reason "manual safety stop"
 uv run --frozen codexbot-admin emergency-stop --database data/codexbot.sqlite3 release --reason "startup checks completed"
+uv run --frozen codexbot-admin status --database data/codexbot.sqlite3
 ```
 
 The CI workflow runs the same lint, type, and test checks. No credential is

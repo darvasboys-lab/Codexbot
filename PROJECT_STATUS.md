@@ -54,6 +54,9 @@ Status date: 2026-10-28 (Asia/Kolkata)
 - Strict read-only Dhan order-book, trade-book, and position snapshots for future
   restart/uncertain-state reconciliation, including partial quantities, prices,
   identity checks, and position quantity consistency.
+- Atomic append-only persistence for real Dhan reconciliation snapshots and their
+  normalized order/trade/position observations, plus a secret-free local status
+  summary. No TEST path invents these rows.
 - Secret-free system health composition for Telegram, Dhan token/funds, SQLite
   integrity, emergency-stop state, and absent executor; fixed 08:00
   Asia/Kolkata schedule calculation and append-only health audit.
@@ -81,7 +84,8 @@ Status date: 2026-10-28 (Asia/Kolkata)
   authenticated operator feedback remains planned.
 - Read-only Dhan margin connectivity. Token, fund, order, trade, and position
   readers are implemented but await credentialed verification.
-- Journal retention/backup scheduling and restart reconciliation.
+- Journal retention/backup scheduling and comparison/action policy for restart
+  reconciliation; broker observations are durable.
 - Composition of pricing, sizing, funds/margin, risk, pending-entry cancellation, execution,
   partial-fill/retry, and protection logic.
 - Exchange calendar, missed/late 08:00 behavior, health retries, and notification

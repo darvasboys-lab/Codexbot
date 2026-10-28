@@ -51,6 +51,7 @@ from codexbot.models import (
 )
 from codexbot.parsing import OptionType, ParsedMessage, ParseReason, TelegramMessageParser
 from codexbot.persistence import (
+    BrokerSnapshotStatus,
     DuplicateClaimResult,
     EmergencyStopStatus,
     SignalReceipt,
@@ -92,6 +93,7 @@ from codexbot.telegram import (
 __all__ = [
     "Action",
     "BotSettings",
+    "BrokerSnapshotStatus",
     "CheckDisposition",
     "CheckReport",
     "CheckerPolicy",
