@@ -97,6 +97,8 @@ repository fallback file. The timer remains disabled until official BSE data,
 production cache age/frequency, missed-run, retry, and log-group notification are
 completed. A fail-closed weekday can be opened only through the dated audited
 `codexbot-admin calendar-override` command; BSE cannot be overridden.
+The attended TEST environment sets both instrument and NSE calendar maximum ages
+to 86,400 seconds.
 
 Network clients use a 3-second connect and 5-second read policy. The future LIMIT
 executor will use the approved 45-second fill timeout and must reconcile uncertain

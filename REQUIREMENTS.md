@@ -93,6 +93,9 @@ answer. Code must not turn an open decision into an implicit default.
   atomic current pointer, verify size/checksum/age on load, retain last-known-good
   data after refresh failure, use restrictive permissions, and keep bounded old
   snapshots. A stale or corrupt cache fails closed.
+- During attended TEST, the Dhan instrument snapshot and official NSE calendar
+  cache each have a maximum accepted age of 86,400 seconds. Production refresh
+  and missed-run escalation remain separate decisions.
 - Use Yahoo Finance for equity market prices for now. The adapter retains the
   Yahoo market timestamp, local receipt timestamp, previous completed one-minute
   close, and previous-day close. It fails closed on missing, malformed,

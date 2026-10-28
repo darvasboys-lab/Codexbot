@@ -99,6 +99,8 @@ Status date: 2026-10-28 (Asia/Kolkata)
 - Bounded official NSE holiday downloading and atomic owner-only cache with strict
   CM/FO schema/date/year/source/freshness validation, last-known-good preservation,
   CLI maintenance, calendar-aware system health, and a public-data smoke test.
+- Attended TEST accepts Dhan instrument and NSE calendar caches for at most
+  86,400 seconds; production refresh and missed-run policy remain open.
 - Append-only dated NSE manual-open/clear history with local OS actor/reason,
   special-session precedence, terminal status, and filtered audit views.
 - Callable Telegram delivery for audit-derived daily summaries. Automated timing

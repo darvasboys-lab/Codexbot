@@ -15,11 +15,11 @@ are tracked separately so offline tests cannot be mistaken for deployment proof.
 | Requirements and reference review | Implemented | Approved/open rules separated; archive reviewed without source reuse |
 | Group-only signal authentication, freshness, parser, and checker | Implemented offline | Credentialed Telegram TEST still required |
 | SQLite WAL audit, deduplication, maintenance | Implemented offline | Owner/path protections enforced; VM backup schedule, retention, and restore drill remain open |
-| Dhan instrument resolver and atomic cache | Implemented and public-data tested | Production refresh frequency and maximum age required |
+| Dhan instrument resolver and atomic cache | Implemented and public-data tested | TEST maximum age 24h; production refresh schedule remains open |
 | Yahoo equity and option price calculations | Implemented offline | Equity percentage and Dhan tick-unit conversion required |
 | Quote integrity and anomaly gates | Implemented offline | 3s tick/local, 3% minute, 5% daily, 24h EOD; credentialed feed evidence required |
 | Fixed-fractional sizing and capital risk | Implemented offline | Exact risk/allocation values and sector classification evidence required |
-| Delivery routing, NSE calendar, and session policy | Implemented/public-data tested | BSE source and production refresh timing open |
+| Delivery routing, NSE calendar, and session policy | Implemented/public-data tested | TEST NSE cache age 24h; BSE source and production refresh timing open |
 | Telegram listener and log-group reporting | Implemented offline | Operator-attended session and configured-group TEST required |
 | Authenticated operator feedback and history | Implemented offline | Actual operator/log IDs and credentialed TEST required |
 | Runnable TEST listener service | Implemented offline | Protected values, caches, and operator-attended Telegram TEST required |
@@ -63,7 +63,7 @@ are tracked separately so offline tests cannot be mistaken for deployment proof.
 | D-04 | NSE/BSE selection rule (delivery now; MTF deferred) | Equity instrument selection |
 | D-05 | Retry price/recalculation rule (3s/5s network and 45s fill resolved) | Partial-fill one-retry state machine |
 | D-06 | TEST/LIVE transition and restart backlog (delivery EOD times resolved) | Runtime lifecycle actions |
-| D-07 | BSE source, NSE cache age/refresh, missed 08:00 run, retry/alert behavior | Automated daily health schedule |
+| D-07 | BSE source, production refresh, missed 08:00 run, retry/alert behavior | Automated daily health schedule |
 | D-08 | AI provider, data policy, eligible rechecks, cost and timeout | Advisory AI layer |
 | D-09 | Groups/log, capital and numeric limits resolved; sector map and optional feedback operator IDs remain | Credentialed TEST configuration |
 | D-10 | Project/VM/zone resolved; supply authorized GCP/SSH connection, backup destination/cost and test-record retention semantics | Existing auditbot deployment |
