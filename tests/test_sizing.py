@@ -5,6 +5,7 @@ import pytest
 from codexbot import (
     SizingError,
     SizingMode,
+    SizingSelection,
     size_equity_budget,
     size_equity_fixed_shares,
     size_option_budget,
@@ -71,3 +72,11 @@ def test_option_lot_size_must_be_positive_integral_units(lot_size: str) -> None:
             lot_size=Decimal(lot_size),
             limit_price=Decimal("36.40"),
         )
+
+
+def test_setup_selection_requires_whole_fixed_units_but_allows_decimal_budget() -> None:
+    assert SizingSelection(
+        mode=SizingMode.BUDGET, configured_value=Decimal("50000.50")
+    ).configured_value == Decimal("50000.50")
+    with pytest.raises(ValueError, match="whole number"):
+        SizingSelection(mode=SizingMode.FIXED, configured_value=Decimal("1.5"))

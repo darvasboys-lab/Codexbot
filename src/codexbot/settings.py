@@ -13,6 +13,7 @@ from pathlib import Path
 
 from codexbot.models import CheckerPolicy, ExecutionMode
 from codexbot.risk import RiskLimits
+from codexbot.sizing import SizingMode, SizingSelection
 
 
 class SettingsError(ValueError):
@@ -69,6 +70,8 @@ class BotSettings:
     yahoo_maximum_market_age: timedelta | None = None
     yahoo_maximum_local_age: timedelta | None = None
     risk_limits: RiskLimits | None = None
+    equity_sizing: SizingSelection | None = None
+    option_sizing: SizingSelection | None = None
 
     def checker_policy(self) -> CheckerPolicy:
         return CheckerPolicy(
@@ -133,6 +136,12 @@ def configuration_from_mapping(values: Mapping[str, str]) -> RuntimeConfiguratio
     risk_limits = _optional_risk_limits(values)
     if segment_active and risk_limits is None:
         raise SettingsError("an active segment requires all six risk limit settings")
+    equity_sizing = _optional_sizing_selection(values, prefix="CODEXBOT_EQUITY")
+    option_sizing = _optional_sizing_selection(values, prefix="CODEXBOT_OPTION")
+    if equity_active and equity_sizing is None:
+        raise SettingsError("active equity requires an explicit sizing mode and value")
+    if fno_active and option_sizing is None:
+        raise SettingsError("active F&O requires an explicit option sizing mode and value")
 
     settings = BotSettings(
         mode=mode,
@@ -151,6 +160,8 @@ def configuration_from_mapping(values: Mapping[str, str]) -> RuntimeConfiguratio
         yahoo_maximum_market_age=yahoo_maximum_market_age,
         yahoo_maximum_local_age=yahoo_maximum_local_age,
         risk_limits=risk_limits,
+        equity_sizing=equity_sizing,
+        option_sizing=option_sizing,
     )
     telegram = TelegramCredentials(
         api_id=_required_positive_int(values, "TELEGRAM_API_ID"),
@@ -333,6 +344,26 @@ def _required_positive_decimal(values: Mapping[str, str], name: str) -> Decimal:
     return value
 
 
+def _optional_sizing_selection(values: Mapping[str, str], *, prefix: str) -> SizingSelection | None:
+    mode_name = f"{prefix}_SIZING_MODE"
+    value_name = f"{prefix}_SIZING_VALUE"
+    mode_text = values.get(mode_name, "").strip().upper()
+    value_text = values.get(value_name, "").strip()
+    if not mode_text and not value_text:
+        return None
+    if not mode_text or not value_text:
+        raise SettingsError(f"{prefix} sizing mode and value must be supplied together")
+    try:
+        mode = SizingMode(mode_text)
+    except ValueError as error:
+        raise SettingsError(f"{mode_name} must be FIXED or BUDGET") from error
+    value = _required_positive_decimal(values, value_name)
+    try:
+        return SizingSelection(mode=mode, configured_value=value)
+    except ValueError as error:
+        raise SettingsError(str(error)) from error
+
+
 _ENV_LINE = re.compile(r"(?:export\s+)?(?P<name>[A-Za-z_][A-Za-z0-9_]*)=(?P<value>.*)")
 _KNOWN_KEYS = frozenset(
     {
@@ -354,6 +385,10 @@ _KNOWN_KEYS = frozenset(
         "CODEXBOT_TOTAL_EXPOSURE_LIMIT",
         "CODEXBOT_MAX_OPEN_POSITIONS",
         "CODEXBOT_MAX_DAILY_TRADES",
+        "CODEXBOT_EQUITY_SIZING_MODE",
+        "CODEXBOT_EQUITY_SIZING_VALUE",
+        "CODEXBOT_OPTION_SIZING_MODE",
+        "CODEXBOT_OPTION_SIZING_VALUE",
         "TELEGRAM_API_ID",
         "TELEGRAM_API_HASH",
         "TELEGRAM_PHONE_NUMBER",

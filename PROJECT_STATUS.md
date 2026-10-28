@@ -65,6 +65,8 @@ Status date: 2026-10-28 (Asia/Kolkata)
   open positions, and daily trades. Minimum-funds semantics remain a blocker.
 - Pure fixed-share/equity-budget and fixed-lot/option-budget sizing primitives,
   with whole-unit flooring and explicit rejection below one share or lot.
+- Protected setup requires an explicit `FIXED` or `BUDGET` sizing selection/value
+  for each active segment; fixed values must be positive whole units.
 - Structured reason codes and explicit remaining-gate list.
 - Structural safety boundary: the package contains no broker write method, order
   model, fill model, holdings model, or simulator; `trade_ready` is always false.

@@ -70,7 +70,8 @@ list is never evidence that order submission is authorized.
   minimum-funds policy and cannot authorize entry.
 - **Sizing:** isolated fixed-share, equity-budget, fixed-lot, and option-budget
   calculations. Budget modes floor to whole tradable units and reject below one
-  share/lot. No strategy is selected until setup supplies that decision.
+  share/lot. Protected setup requires an explicit mode/value for each active
+  segment and accepts only whole fixed units.
 - **Execution/reconciliation:** LIVE-only order intents, duplicate-submission
   controls, state reconciliation, bounded partial-fill retry, and protection
   exits. Dhan correlation IDs are not assumed to provide idempotency.

@@ -66,11 +66,12 @@ separately approved live test.
   fail startup, exact hard-cap boundaries, combined breach reasons, and that the
   unresolved minimum-funds policy prevents authorization even when caps pass.
 - Verify fixed and budget equity/option sizing, exact notional values, flooring to
-  whole shares/lots, and rejection of sub-unit budgets or invalid lot sizes.
+  whole shares/lots, rejection of sub-unit budgets or invalid lot sizes, and
+  mandatory valid setup selections for active segments.
 - Verify inclusive Yahoo market/local age limits, 2-second future tolerance, INR,
   setup percentage calculation, option 4% ceiling, and floor-to-tick behavior.
 
-Current result: 196 tests pass. Ruff and strict mypy pass.
+Current result: 198 tests pass. Ruff and strict mypy pass.
 
 ## 2. Remaining parser and reference-rule tests
 

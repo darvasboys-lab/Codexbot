@@ -27,6 +27,8 @@ def valid_values() -> dict[str, str]:
         "CODEXBOT_TOTAL_EXPOSURE_LIMIT": "300000",
         "CODEXBOT_MAX_OPEN_POSITIONS": "5",
         "CODEXBOT_MAX_DAILY_TRADES": "10",
+        "CODEXBOT_OPTION_SIZING_MODE": "BUDGET",
+        "CODEXBOT_OPTION_SIZING_VALUE": "50000",
         "TELEGRAM_API_ID": "123456",
         "TELEGRAM_API_HASH": "telegram-secret-hash",
         "TELEGRAM_SESSION_PATH": "/var/lib/codexbot/udit.session",
@@ -51,6 +53,8 @@ def test_configuration_defaults_only_common_mode_to_test() -> None:
     assert configuration.settings.instrument_maximum_age.total_seconds() == 3600
     assert configuration.settings.risk_limits is not None
     assert str(configuration.settings.risk_limits.maximum_order_amount) == "100000"
+    assert configuration.settings.option_sizing is not None
+    assert configuration.settings.option_sizing.mode.value == "BUDGET"
     assert configuration.settings.checker_policy().execution_mode is ExecutionMode.TEST
 
 
@@ -76,6 +80,8 @@ def test_active_equity_requires_all_unresolved_setup_price_values() -> None:
             "CODEXBOT_EQUITY_PRICE_PERCENTAGE": "1.25",
             "CODEXBOT_YAHOO_MAX_MARKET_AGE_SECONDS": "5",
             "CODEXBOT_YAHOO_MAX_LOCAL_AGE_SECONDS": "2",
+            "CODEXBOT_EQUITY_SIZING_MODE": "FIXED",
+            "CODEXBOT_EQUITY_SIZING_VALUE": "10",
         }
     )
     configuration = configuration_from_mapping(values)
@@ -113,6 +119,20 @@ def test_partial_risk_settings_fail_even_when_segments_are_inactive() -> None:
     values.pop("CODEXBOT_MAX_DAILY_TRADES")
 
     with pytest.raises(SettingsError, match="supplied together"):
+        configuration_from_mapping(values)
+
+
+def test_active_segment_requires_explicit_valid_sizing_selection() -> None:
+    values = valid_values()
+    values.pop("CODEXBOT_OPTION_SIZING_MODE")
+    values.pop("CODEXBOT_OPTION_SIZING_VALUE")
+
+    with pytest.raises(SettingsError, match="active F&O requires"):
+        configuration_from_mapping(values)
+
+    values["CODEXBOT_OPTION_SIZING_MODE"] = "FIXED"
+    values["CODEXBOT_OPTION_SIZING_VALUE"] = "1.5"
+    with pytest.raises(SettingsError, match="whole number"):
         configuration_from_mapping(values)
 
 

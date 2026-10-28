@@ -69,7 +69,7 @@ answer. Code must not turn an open decision into an implicit default.
   setup.
 - Fixed equity shares and equity budget calculations are implemented as separate
   pure strategies. Budget mode floors to whole shares and rejects below one share;
-  setup must still select exactly one strategy and value.
+  setup selects exactly one strategy and positive value when equity is active.
 - Resolve instruments from Dhan's official detailed instrument-master schema.
   Require exact NSE/BSE exchange metadata, instrument type, security ID,
   underlying security ID for stock options, option type, strike, expiry, positive
@@ -98,7 +98,8 @@ answer. Code must not turn an open decision into an implicit default.
   listed contract matches. No option writing or index options.
 - Fixed option lots and option budget calculations are implemented as separate
   pure strategies. Budget mode floors to complete lots using the validated lot
-  size and rejects below one lot; setup must still select one strategy and value.
+  size and rejects below one lot; setup selects one strategy and positive value
+  when F&O is active. Fixed share/lot values must be whole numbers.
 - Stop loss and target are setup values, with the previously chosen defaults of
   3% each based on actual fills. Telegram SL/target text is ignored. Prevent
   over-exits and reconcile state on restart.

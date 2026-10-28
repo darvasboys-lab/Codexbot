@@ -103,6 +103,8 @@ Equity budget sizing floors to whole shares and rejects a budget below one share
 Option sizing requires the resolver's positive integral lot size, floors budget
 mode to complete lots, and rejects a budget below one lot. These calculations do
 not choose a mode, reduce for broker funds, or place an order.
+An active segment must provide its sizing mode and value in the protected setup
+file. Fixed values must be whole shares/lots; budget values may contain paise.
 
 The Telegram adapter uses one Telethon user session and registers only
 `NewMessage` for configured groups. It extracts Telegram's marked group,

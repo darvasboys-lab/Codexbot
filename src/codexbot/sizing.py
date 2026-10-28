@@ -17,6 +17,23 @@ class SizingMode(StrEnum):
 
 
 @dataclass(frozen=True, slots=True)
+class SizingSelection:
+    """One explicit setup selection; interpretation is segment-specific."""
+
+    mode: SizingMode
+    configured_value: Decimal
+
+    def __post_init__(self) -> None:
+        if not self.configured_value.is_finite() or self.configured_value <= 0:
+            raise ValueError("configured sizing value must be finite and positive")
+        if (
+            self.mode is SizingMode.FIXED
+            and self.configured_value != self.configured_value.to_integral_value()
+        ):
+            raise ValueError("fixed sizing value must be a whole number")
+
+
+@dataclass(frozen=True, slots=True)
 class SizeResult:
     mode: SizingMode
     quantity: int
