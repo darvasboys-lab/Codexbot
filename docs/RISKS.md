@@ -18,5 +18,6 @@ Status date: 2026-10-28 (Asia/Kolkata)
 | VM/SQLite loss or corruption | WAL, short transactions, integrity/backup/restore commands, encrypted scheduled backups, restore drills, disk alerts | Core tooling implemented; VM operations open |
 | Emergency stop gives false safety | Append-only fail-closed entry gate is checked before deduplication; future write adapter must cancel/reconcile pending entries and separately authenticate close action | Entry gate implemented; broker actions blocked |
 | Risk defaults silently permit oversized entries | Require all six positive values when a segment is active; apply explicit hard caps; keep minimum-funds semantics and final authorization blocked | Configuration and pure caps implemented |
+| Budget sizing exceeds setup amount or creates fractional lots | Floor to whole shares/lots, validate integral lot units, reject below one tradable unit, and keep strategy selection explicit | Pure sizing implemented; setup selection open |
 | Broker/API behavior changes | Pin tested client behavior, monitor official release notes, contract-test read APIs, reverify before LIVE | Ongoing |
 | Health display creates false LIVE confidence | Separate observation health from LIVE capability; include stop and executor state; never log credentials or funds in the health audit | Implemented; notification policy open |

@@ -98,6 +98,12 @@ positions, and daily trades. A pure risk evaluator applies the five unambiguous
 hard caps. It always leaves entry blocked on the minimum-funds policy because its
 meaning and reduce-versus-reject behavior are still unanswered.
 
+Sizing primitives support an explicitly selected fixed or budget calculation.
+Equity budget sizing floors to whole shares and rejects a budget below one share.
+Option sizing requires the resolver's positive integral lot size, floors budget
+mode to complete lots, and rejects a budget below one lot. These calculations do
+not choose a mode, reduce for broker funds, or place an order.
+
 The Telegram adapter uses one Telethon user session and registers only
 `NewMessage` for configured groups. It extracts Telegram's marked group,
 sender/channel, and forward-origin IDs, hands the event to durable processing,

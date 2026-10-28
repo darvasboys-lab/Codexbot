@@ -63,6 +63,8 @@ Status date: 2026-10-28 (Asia/Kolkata)
 - Mandatory typed setup for all six requested risk limits whenever a segment is
   active, plus pure hard-cap evaluation for order value, daily loss, exposure,
   open positions, and daily trades. Minimum-funds semantics remain a blocker.
+- Pure fixed-share/equity-budget and fixed-lot/option-budget sizing primitives,
+  with whole-unit flooring and explicit rejection below one share or lot.
 - Structured reason codes and explicit remaining-gate list.
 - Structural safety boundary: the package contains no broker write method, order
   model, fill model, holdings model, or simulator; `trade_ready` is always false.
@@ -89,7 +91,8 @@ Status date: 2026-10-28 (Asia/Kolkata)
   readers are implemented but await credentialed verification.
 - Journal retention/backup scheduling and comparison/action policy for restart
   reconciliation; broker observations are durable.
-- Composition of pricing, sizing, funds/margin, risk, pending-entry cancellation, execution,
+- Selection/configuration and composition of pricing, sizing, funds/margin, risk,
+  pending-entry cancellation, execution,
   partial-fill/retry, and protection logic.
 - Exchange calendar, missed/late 08:00 behavior, health retries, and notification
   delivery. The one-shot health/token composition and fixed time are implemented.

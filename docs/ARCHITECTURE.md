@@ -68,6 +68,9 @@ list is never evidence that order submission is authorized.
   The implemented pure layer applies order-value, daily-loss, exposure,
   open-position, and daily-trade caps. It always reports the unresolved
   minimum-funds policy and cannot authorize entry.
+- **Sizing:** isolated fixed-share, equity-budget, fixed-lot, and option-budget
+  calculations. Budget modes floor to whole tradable units and reject below one
+  share/lot. No strategy is selected until setup supplies that decision.
 - **Execution/reconciliation:** LIVE-only order intents, duplicate-submission
   controls, state reconciliation, bounded partial-fill retry, and protection
   exits. Dhan correlation IDs are not assumed to provide idempotency.

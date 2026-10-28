@@ -65,10 +65,12 @@ separately approved live test.
 - Verify active segments require all six risk settings, invalid/partial values
   fail startup, exact hard-cap boundaries, combined breach reasons, and that the
   unresolved minimum-funds policy prevents authorization even when caps pass.
+- Verify fixed and budget equity/option sizing, exact notional values, flooring to
+  whole shares/lots, and rejection of sub-unit budgets or invalid lot sizes.
 - Verify inclusive Yahoo market/local age limits, 2-second future tolerance, INR,
   setup percentage calculation, option 4% ceiling, and floor-to-tick behavior.
 
-Current result: 187 tests pass. Ruff and strict mypy pass.
+Current result: 196 tests pass. Ruff and strict mypy pass.
 
 ## 2. Remaining parser and reference-rule tests
 

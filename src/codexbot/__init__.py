@@ -88,6 +88,15 @@ from codexbot.settings import (
     configuration_from_mapping,
     load_protected_environment,
 )
+from codexbot.sizing import (
+    SizeResult,
+    SizingError,
+    SizingMode,
+    size_equity_budget,
+    size_equity_fixed_shares,
+    size_option_budget,
+    size_option_fixed_lots,
+)
 from codexbot.telegram import (
     TelegramHealth,
     TelegramListenerError,
@@ -155,6 +164,9 @@ __all__ = [
     "SignalChecker",
     "SignalProcessor",
     "SignalReceipt",
+    "SizeResult",
+    "SizingError",
+    "SizingMode",
     "SystemHealthCoordinator",
     "SystemHealthReport",
     "SQLiteJournal",
@@ -174,6 +186,10 @@ __all__ = [
     "generate_totp",
     "load_protected_environment",
     "scheduled_health_time",
+    "size_equity_budget",
+    "size_equity_fixed_shares",
+    "size_option_budget",
+    "size_option_fixed_lots",
     "telegram_envelope_from_event",
     "validate_telegram_session",
     "validate_equity_entry_reference",
