@@ -49,6 +49,10 @@ ages, missed-run, retry, notification, backup, and retention policies are suppli
 The separate `codexbot-telegram-auth --environment <protected-file>` command is
 the only supported interactive session-creation path and must run attended as
 the service user before the listener starts.
+Run `codexbot-preflight --environment <protected-file>` immediately afterward.
+It emits no credentials or raw messages and verifies every local startup
+dependency. The listener and five-minute health unit reuse this check, so stale
+caches or unsafe state stop readiness without opening a network port.
 
 Runtime values will live in one protected environment file readable only by the
 service account. Telegram session files and durable state will live outside the

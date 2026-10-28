@@ -23,6 +23,7 @@ are tracked separately so offline tests cannot be mistaken for deployment proof.
 | Telegram listener and log-group reporting | Implemented offline | Operator-attended session and configured-group TEST required |
 | Authenticated operator feedback and history | Implemented offline | Actual operator/log IDs and credentialed TEST required |
 | Runnable TEST listener service | Implemented offline | Protected values, caches, and operator-attended Telegram TEST required |
+| Unified TEST deployment preflight | Implemented offline | Run on auditbot after credentials/session/caches are prepared |
 | Dhan authentication and read-only reconciliation | Implemented offline | Dhan credentials and account read-only TEST required |
 | Emergency stop and SSH status | Implemented offline | VM permissions and pending-order cancellation require later executor |
 | 08:00 component health | Implemented with calendar health | Missed-run, retry, and notification policy required |
@@ -35,7 +36,7 @@ are tracked separately so offline tests cannot be mistaken for deployment proof.
 - Python 3.12 locked environment: passing.
 - Ruff: passing.
 - Strict mypy: passing.
-- Automated tests: 265 passing.
+- Automated tests: 269 passing.
 - GitHub CI: required for every push to `main`.
 - Broker write methods: absent.
 - Paper trading and simulated portfolio state: absent.

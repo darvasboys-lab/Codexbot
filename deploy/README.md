@@ -31,7 +31,8 @@ Before enabling the service:
 8. Run the complete automated suite and capture the exact Git SHA and CI result.
 
 `codexbot-health.*.example` performs a local service and SQLite integrity check
-every five minutes without opening a port. `codexbot.logrotate.example` proposes
+every five minutes through the same secret-free TEST preflight used at listener
+startup, without opening a port. `codexbot.logrotate.example` proposes
 separate application/error files with 14 daily rotations. The backup examples
 propose a consistent local daily SQLite backup and delete files older than seven
 days. They are templates only: do not enable backup scheduling until destination,

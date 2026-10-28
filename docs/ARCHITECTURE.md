@@ -35,6 +35,11 @@ configuration and fresh validated instrument cache, constructs the journal,
 parser, checker, resolver, Telegram/feedback listener, and reporting, and refuses
 LIVE mode while no executor exists.
 
+`codexbot-preflight` is the shared startup boundary. It validates the protected
+session, instrument/calendar caches, current calendar year, SQLite WAL/integrity,
+emergency stop, TEST mode, and structural absence of a broker executor before the
+listener is constructed. Its JSON output contains operational metadata only.
+
 ## Component boundaries
 
 - **Telegram adapter:** receives message events, reconnects safely, protects

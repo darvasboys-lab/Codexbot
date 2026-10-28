@@ -10,11 +10,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from codexbot.checking import SignalChecker
-from codexbot.instrument_cache import DhanInstrumentMasterCache
-from codexbot.instruments import DhanInstrumentResolver, Exchange
+from codexbot.instruments import DhanInstrumentResolver
 from codexbot.models import ExecutionMode
 from codexbot.parsing import TelegramMessageParser
 from codexbot.persistence import SQLiteJournal
+from codexbot.preflight import PreflightError, perform_test_preflight
 from codexbot.processing import SignalProcessor
 from codexbot.settings import RuntimeConfiguration, load_protected_environment
 from codexbot.telegram import TelethonListener
@@ -61,15 +61,16 @@ def main(
     previous_umask = os.umask(0o077)
     try:
         configuration = load_protected_environment(arguments.environment)
-        if configuration.settings.mode is not ExecutionMode.TEST:
-            raise RuntimeStartupError("LIVE_EXECUTOR_ABSENT")
         now = (clock or (lambda: datetime.now(UTC)))()
-        loaded = DhanInstrumentMasterCache(configuration.settings.instrument_cache_directory).load(
-            maximum_age=configuration.settings.instrument_maximum_age,
-            now=now,
-            enabled_exchanges=frozenset({Exchange.NSE, Exchange.BSE}),
+        try:
+            preflight = perform_test_preflight(configuration, now=now)
+        except PreflightError as error:
+            raise RuntimeStartupError(str(error)) from error
+        listener = create_test_listener(
+            configuration,
+            resolver=preflight.instruments.resolver,
+            journal=preflight.journal,
         )
-        listener = create_test_listener(configuration, resolver=loaded.resolver)
         asyncio.run(listener.run())
         return 0
     finally:

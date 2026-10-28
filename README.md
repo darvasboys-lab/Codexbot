@@ -183,12 +183,17 @@ current observation service with:
 
 ```bash
 codexbot-telegram-auth --environment /etc/codexbot/codexbot.env
+codexbot-preflight --environment /etc/codexbot/codexbot.env
 codexbot-listener --environment /etc/codexbot/codexbot.env
 ```
 
 Run `codexbot-telegram-auth` only in an attended terminal as the `codexbot`
 service user. It reads API values from the protected environment, prompts through
 Telethon when needed, disconnects, and reapplies `0600` session permissions.
+`codexbot-preflight` emits only a secret-free JSON readiness record and fails
+closed on LIVE mode, session permissions, stale/corrupt caches, wrong calendar
+year, SQLite integrity, or unsafe runtime paths. Listener startup runs the same
+preflight and retains the default engaged emergency stop.
 
 This entrypoint is intentionally TEST-only and exits with `LIVE_EXECUTOR_ABSENT`
 for `CODEXBOT_MODE=LIVE`. It assembles the durable journal, parser, checker,

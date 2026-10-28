@@ -4,8 +4,8 @@ After=codexbot.service
 
 [Service]
 Type=oneshot
-User=root
-Group=root
+User=codexbot
+Group=codexbot
 ExecStart=/usr/local/libexec/codexbot-healthcheck
 NoNewPrivileges=true
 PrivateTmp=true

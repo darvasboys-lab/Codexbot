@@ -113,6 +113,10 @@ Status date: 2026-10-28 (Asia/Kolkata)
   a fresh validated instrument snapshot, builds the complete observation graph,
   and refuses `LIVE` with `LIVE_EXECUTOR_ABSENT`. A hardened review-only systemd
   example and preflight checklist are present but have not been deployed.
+- Runnable `codexbot-preflight` shared with listener startup that returns a
+  secret-free local readiness record and fails closed on LIVE, unsafe session,
+  stale caches, wrong calendar year, or SQLite integrity/path failures. The local
+  health timer runs this same check as the service user.
 - Target-locked read-only `auditbot` inspection, five-minute local health-check,
   14-rotation application-log, and seven-day local-backup systemd templates. The
   current managed workspace has no GCP identity or SSH/TCP connection, so none

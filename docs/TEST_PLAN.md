@@ -92,13 +92,17 @@ separately approved live test.
 - Verify the runnable listener composition creates the complete TEST graph and
   exposes no order methods, while a LIVE configuration fails startup with the
   fixed `LIVE_EXECUTOR_ABSENT` code.
+- Verify unified preflight accepts only protected current TEST state, requires
+  NSE/BSE instrument data and current-year NSE calendar data, initializes an
+  engaged WAL journal, reports the absent executor, and rejects LIVE, naive time,
+  and wrong-year calendar snapshots.
 - Verify the SQLite directory cannot be a symlink and is owner-only, database and
   backup files are owner-only, and a database made group/world-readable is refused.
 - On the attached target, run the read-only deployment inspection first and verify
   it refuses mismatched project, instance, zone, and OS metadata. Validate systemd
   units before installation and confirm no new listening socket appears afterward.
 
-Current result: 265 tests pass. Ruff and strict mypy pass.
+Current result: 269 tests pass. Ruff and strict mypy pass.
 
 ## 2. Remaining parser and reference-rule tests
 

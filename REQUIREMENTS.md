@@ -186,6 +186,10 @@ answer. Code must not turn an open decision into an implicit default.
   environment and validated instrument cache, then composes the journal, parser,
   deterministic checker, resolver, Telegram listener, feedback, and reporting.
   It must refuse `LIVE` while the broker write executor is absent.
+- Provide one secret-free TEST preflight used by both terminal operations and
+  listener startup. It must validate TEST mode, protected Telegram session,
+  instrument and calendar cache ages, current calendar year, SQLite WAL/integrity,
+  emergency-stop state, configured group count, and absent broker executor.
 
 ## Open decisions — implementation blocked where affected
 
