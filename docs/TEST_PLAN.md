@@ -24,8 +24,9 @@ separately approved live test.
   two-writer claim race.
 - Verify emergency stop defaults engaged, stores append-only actor/reason history,
   is operable through the local CLI, and blocks before a duplicate claim.
-- Verify Yahoo NSE/BSE symbol construction, timestamps, caller-defined quote age,
-  and fail-closed malformed-response handling with an injected local transport.
+- Verify Yahoo NSE/BSE symbol construction, market/receipt timestamps, prior
+  minute/day references, and fail-closed malformed responses with an injected
+  transport.
 - Verify the supplied CDSL option range uses 35 as its upper bound; Telegram
   SL/target prose cannot modify it; SENSEX parses as an option candidate and is
   rejected only by verified index facts; supplied EXIT forms remain non-BUY; and
@@ -66,16 +67,22 @@ separately approved live test.
   backup validation, and appears only as counts/times in local status.
 - Verify 08:00 Asia/Kolkata conversion, redacted component health audit, TEST
   observation health, and explicit false LIVE capability when no executor exists.
-- Verify active segments require all six risk settings, invalid/partial values
-  fail startup, exact hard-cap boundaries, combined breach reasons, and that the
-  unresolved minimum-funds policy prevents authorization even when caps pass.
+- Verify active segments require all five absolute risk settings, invalid/partial
+  values fail startup, exact hard-cap boundaries, 5% cash floor, 95% spendable
+  funds, 2% daily halt, 1% position stop signal, three-position sector cap, and
+  required account/sector facts before authorization.
 - Verify fixed and budget equity/option sizing, exact notional values, flooring to
   whole shares/lots, rejection of sub-unit budgets or invalid lot sizes, and
   mandatory valid setup selections for active segments.
-- Verify inclusive Yahoo market/local age limits, 2-second future tolerance, INR,
-  setup percentage calculation, option 4% ceiling, and floor-to-tick behavior.
+- Verify inclusive 3-second Yahoo market/local limits, 2-second future tolerance,
+  3%/5% anomalies, 24-hour daily data, INR, setup percentage, option 4% ceiling,
+  and floor-to-tick behavior.
+- Verify fixed-fractional risk/allocation sizing with exact 10-15% setup validation,
+  whole-lot flooring, delivery-only 5% buffer routing, 3s/5s/45s timeout policies,
+  cancel/reconcile-before-retry, no market conversion, IST phase boundaries, and
+  fail-closed local-calendar/manual-override behavior.
 
-Current result: 205 tests pass. Ruff and strict mypy pass.
+Current result: 226 tests pass. Ruff and strict mypy pass.
 
 ## 2. Remaining parser and reference-rule tests
 

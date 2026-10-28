@@ -58,21 +58,21 @@ Sources:
 - [Dhan live market feed](https://dhanhq.co/docs/v2/live-market-feed/)
 
 Udit approved Yahoo Finance for equity prices for the current phase and requested
-that no other market-data API be pursued now. A read-only adapter retrieves
-`regularMarketPrice` and `regularMarketTime` for NSE `.NS` and BSE `.BO` symbols,
-and records local receipt time. It rejects missing, malformed, non-positive, or
-non-unique results. The adapter has no broker-order capability.
+that no other market-data API be pursued now. The read-only adapter retrieves
+`regularMarketPrice`, `regularMarketTime`, the previous completed one-minute close,
+and `chartPreviousClose` for NSE `.NS` and BSE `.BO` symbols, and records local
+receipt time. It rejects missing, malformed, non-positive, or non-unique results.
 
 Yahoo's official coverage page states its data is informational and not intended
-for trading; it lists NSE as real-time and BSE as delayed by 15 minutes. Maximum
-Yahoo market age and local response age remain required configuration decisions
-before the price gate can pass. This known limitation remains part of the
-pre-LIVE evidence review; it does not trigger work on another API now.
+for trading; it lists NSE as real-time and BSE as delayed by 15 minutes. The
+approved maximum market and local ages are both 3 seconds. Tick deviation may not
+exceed 3% from the previous one-minute close or 5% from the previous-day close;
+daily data is limited to 24 hours. Yahoo data that cannot meet these limits fails
+closed. This does not trigger work on another API now.
 
-The implemented equity pricing policy requires both age limits and the setup
-percentage, accepts those boundaries inclusively with the approved 2-second
-future tolerance, requires INR, and returns an unrounded LIMIT ceiling. It has no
-fallback price source.
+The equity policy enforces those limits inclusively with the 2-second future
+tolerance, requires INR and the setup percentage, and returns an unrounded LIMIT
+ceiling. It has no fallback source.
 
 ## Instruments, tick sizes, lots, and MTF
 
@@ -118,8 +118,9 @@ including `CNC`, `MARGIN`, and `MTF` product types. A documented product enum do
 not establish that Udit's account or a specific instrument is eligible. Before an
 MTF entry, the future read-only integration must verify account consent, positive
 instrument eligibility/leverage, and a successful current margin calculation.
-Whether an MTF failure rejects or falls back to delivery remains open; no fallback
-will be inferred.
+Delivery/CNC is the selected current product. If it cannot fit the 5% cash buffer,
+the current stage rejects the entry. MTF and its eligibility/margin fallback are
+deferred and cannot be selected by the current router.
 
 Sources:
 
@@ -144,6 +145,11 @@ Consequences for the approved retry rule:
    broker/exchange state and trades before calculating any unfilled quantity.
 6. Make at most the one approved retry, after the timeout and retry-price policies
    are supplied. If cancellation or state cannot be confirmed, do not retry.
+
+The approved transport policy is a 3-second connect timeout and 5-second read
+timeout. The LIMIT fill timeout is 45 seconds. Market conversion is disabled both
+by the project's LIMIT-only rule and the reviewed algo market-price-protection
+requirement. The retry price/recalculation rule is still open.
 
 Source: [Dhan orders](https://dhanhq.co/docs/v2/orders/)
 
@@ -212,11 +218,12 @@ Official sources:
 
 ## Trading calendar
 
-NSE's official holiday endpoint provides segment-specific calendars, including
-separate cash-market and F&O entries and special sessions. Monday-to-Friday alone
-is insufficient for the 08:00 job. The final scheduler should use an auditable
-cached calendar, define CM/FO mismatch behavior, and support an authenticated
-manual override for official special sessions or emergency changes.
+NSE's official holiday endpoint provides segment-specific calendars. The small
+2026 CM/FO fallback in `config/exchange_holidays_2026.json` was captured from that
+endpoint on 28 October 2026. Dynamic data remains authoritative. When it is
+unavailable, a known weekend/holiday stays closed and any other weekday also stays
+closed until an authenticated manual open override, recorded as cautionary.
+Special-session handling and dynamic cache refresh/expiry remain to be implemented.
 
 Source: [NSE trading holiday data](https://www.nseindia.com/api/holiday-master?type=trading)
 

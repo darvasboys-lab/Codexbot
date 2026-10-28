@@ -164,12 +164,14 @@ class DhanHttpsTransport:
     def __init__(
         self,
         *,
-        timeout_seconds: float = 10.0,
+        connection_timeout_seconds: float = 3.0,
+        read_timeout_seconds: float = 5.0,
         connection_factory: Callable[..., http.client.HTTPSConnection] | None = None,
     ) -> None:
-        if timeout_seconds <= 0:
-            raise ValueError("timeout_seconds must be positive")
-        self._timeout_seconds = timeout_seconds
+        if connection_timeout_seconds <= 0 or read_timeout_seconds <= 0:
+            raise ValueError("connection and read timeouts must be positive")
+        self._connection_timeout_seconds = connection_timeout_seconds
+        self._read_timeout_seconds = read_timeout_seconds
         self._connection_factory = connection_factory or http.client.HTTPSConnection
 
     def generate_access_token(self, *, client_id: str, pin: str, totp: str) -> Mapping[str, object]:
@@ -214,10 +216,13 @@ class DhanHttpsTransport:
         try:
             connection = self._connection_factory(
                 host,
-                timeout=self._timeout_seconds,
+                timeout=self._connection_timeout_seconds,
                 context=ssl.create_default_context(),
             )
             connection.request(method, target, headers=dict(headers))
+            socket = getattr(connection, "sock", None)
+            if socket is not None:
+                socket.settimeout(self._read_timeout_seconds)
             response = connection.getresponse()
             body = response.read(_MAX_RESPONSE_BYTES + 1)
             if len(body) > _MAX_RESPONSE_BYTES:

@@ -20,11 +20,12 @@ Status date: 2026-10-28 (Asia/Kolkata)
   strike, expiry, price, and CE/PE do not distinguish signals in the window.
 - Database integrity, consistent backup, and temporary restore-test functions and
   CLI commands.
-- Read-only Yahoo Finance NSE/BSE equity quote adapter with market and receipt
-  timestamps, strict response validation, and caller-supplied freshness limits.
-- Fail-closed equity price policy with explicit Yahoo market/local age limits and
-  setup percentage, plus the approved option `1.04` ceiling rounded down to a
-  caller-supplied verified tick.
+- Read-only Yahoo Finance NSE/BSE quote adapter with market/receipt timestamps,
+  previous completed one-minute close, previous-day close, and strict response
+  validation. Pricing enforces 3-second market/local age, 3% minute and 5% daily
+  anomaly limits, plus a 24-hour daily-data freshness primitive.
+- Fail-closed equity price policy still requires the setup percentage, plus the
+  approved option `1.04` ceiling rounded down to a verified price-unit tick.
 - Conservative Telegram parser for the supplied compact option BUY and two EXIT
   forms. It preserves price bounds, month, strike, and CE/PE; ignores Telegram
   SL/target prose; and fails closed for the supplied analysis, watchlist,
@@ -65,13 +66,26 @@ Status date: 2026-10-28 (Asia/Kolkata)
 - Secret-free system health composition for Telegram, Dhan token/funds, SQLite
   integrity, emergency-stop state, and absent executor; fixed 08:00
   Asia/Kolkata schedule calculation and append-only health audit.
-- Mandatory typed setup for all six requested risk limits whenever a segment is
-  active, plus pure hard-cap evaluation for order value, daily loss, exposure,
-  open positions, and daily trades. Minimum-funds semantics remain a blocker.
+- Mandatory typed setup for all five requested absolute risk limits whenever a
+  segment is active, plus pure evaluation for those limits, the 5% cash buffer,
+  2% daily-capital halt, 1% per-position hard-stop signal, and three-position
+  sector cap. Current account/sector evidence is required to authorize entry.
 - Pure fixed-share/equity-budget and fixed-lot/option-budget sizing primitives,
   with whole-unit flooring and explicit rejection below one share or lot.
-- Protected setup requires an explicit `FIXED` or `BUDGET` sizing selection/value
-  for each active segment; fixed values must be positive whole units.
+- Protected setup still requires an explicit `FIXED` or `BUDGET` lot selection for
+  active F&O; fixed values must be positive whole units.
+- Delivery equity now additionally requires explicit fixed-fractional risk and
+  allocation percentages; the allocation must be selected from 10% through 15%.
+  Pure sizing floors to whole shares/lots and applies both loss-at-stop and capital
+  allocation ceilings.
+- Pure delivery-only routing accepts `CNC` only within 95% of available cash and
+  rejects otherwise; MTF is deferred. Pure lifecycle policy records 3-second
+  connect, 5-second read, 45-second LIMIT fill, reconcile-before-retry, one retry,
+  and no market conversion.
+- Asia/Kolkata session classification implements initialization, opening guard,
+  normal entry, square-off/no-entry, and 15:35 reconciliation/log-rotation phases.
+  Calendar fallback is fail-closed with authenticated manual-open override support;
+  the official NSE 2026 CM/FO holiday snapshot is stored as a small JSON file.
 - Structured reason codes and explicit remaining-gate list.
 - Structural safety boundary: the package contains no broker write method, order
   command/intent, simulated fill/holding model, or simulator; `trade_ready` is
@@ -99,12 +113,10 @@ Status date: 2026-10-28 (Asia/Kolkata)
   readers are implemented but await credentialed verification.
 - Journal retention/backup scheduling and comparison/action policy for restart
   reconciliation; broker observations are durable.
-- Selection/configuration and composition of pricing, sizing, funds/margin, risk,
-  pending-entry cancellation, execution,
-  partial-fill/retry, and protection logic.
-- Exchange calendar, missed/late 08:00 behavior, health retries, and notification
-  and daily-summary delivery. The one-shot health/token composition, fixed time,
-  per-signal reporting, and summary calculation are implemented.
+- Composition of pricing, sizing, sector facts, funds, risk, delivery routing,
+  pending-entry cancellation, execution, partial-fill/retry, and protection logic.
+- Dynamic calendar fetching/caching, official BSE/special-session data, missed/late
+  08:00 behavior, health retries, notification, and daily-summary delivery.
 - SSH terminal dashboard, Google Cloud Logging, Docker, and new GCE deployment.
 - Any `LIVE` order path or live test.
 
@@ -118,7 +130,8 @@ Status date: 2026-10-28 (Asia/Kolkata)
   runtime settings remain excluded from Git.
 - Yahoo integration is covered by injected-response unit tests. A read-only
   `RELIANCE.NS` request returned a timestamped INR response on 2026-10-27; it was
-  a connectivity smoke check, not trading evidence. Quote-age limits remain unset.
+  a connectivity smoke check before the new anomaly fields and is not trading
+  evidence. The approved 3-second rule may reject Yahoo data in practice.
 - The resolver loaded Dhan's 2026-10-27 public detailed master. It uniquely
   resolved the supplied CDSL October 1400 CE to NSE security `62508`, underlying
   `21174`, lot `475`, and classified the supplied SENSEX option as a BSE index.

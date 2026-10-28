@@ -62,12 +62,12 @@ before activation, stores SHA-256 versioned snapshots with `0600` permissions,
 switches the current pointer atomically, preserves the last-known-good version on
 failure, verifies age/size/checksum when loading, and prunes inactive snapshots.
 
-The pricing layer validates Yahoo's market timestamp and local response timestamp
-against explicit setup limits. It applies the setup percentage without inventing
-a default. For stock options it multiplies the signal upper bound by `1.04` and
-rounds down to a caller-supplied verified tick, so the result cannot exceed the
-ceiling. Dhan's raw tick is not passed into this function until its unit conversion
-is verified.
+The pricing layer limits both Yahoo's market timestamp and local response age to
+3 seconds, compares each tick with the previous completed one-minute close (3%)
+and previous-day close (5%), and rejects daily data older than 24 hours. It applies
+the setup percentage without inventing a value. For stock options it multiplies
+the signal upper bound by `1.04` and rounds down to a verified price-unit tick.
+Dhan's raw tick remains disconnected until its conversion is verified.
 
 The Dhan read-only session generates the documented TOTP locally, validates the
 returned client identity and IST expiry, and verifies the session with
@@ -88,23 +88,33 @@ loader rejects symlinks, group/world permissions, unknown/duplicate keys, invali
 IDs, and missing values. Only `CODEXBOT_MODE` defaults, and it defaults to `TEST`;
 equity/F&O activation, groups, source IDs, paths, snapshot age, Telegram values,
 and Dhan TOTP credentials must be explicit. Enabling equity also requires the
-percentage above market and both Yahoo age limits. Secret representations are redacted.
+percentage above market, both Yahoo ages at no more than 3 seconds, and explicit
+fixed-fractional risk/allocation values. Secret representations are redacted.
 See [.env.example](.env.example); keep the populated file outside Git with mode
 `0600`.
 
-Whenever equity or F&O is active, setup also requires all six risk values:
-maximum order amount, minimum trade funds, daily loss, total exposure, open
-positions, and daily trades. A pure risk evaluator applies the five unambiguous
-hard caps. It always leaves entry blocked on the minimum-funds policy because its
-meaning and reduce-versus-reject behavior are still unanswered.
+Whenever equity or F&O is active, setup also requires five absolute risk values:
+maximum order amount, daily loss, total exposure, open positions, and daily
+trades. Pure evaluation also applies the fixed 5% cash floor, 95%
+spendable-funds rule, 2% daily-capital halt, 1% position hard-stop signal, and
+three-position sector cap. It requires actual account and sector facts.
 
-Sizing primitives support an explicitly selected fixed or budget calculation.
+Sizing primitives retain fixed and budget calculations, while delivery equity uses
+fixed-fractional sizing with an explicit risk percentage no greater than 1% and a selected 10-15%
+capital allocation cap. The tighter risk/allocation quantity is floored to shares.
 Equity budget sizing floors to whole shares and rejects a budget below one share.
 Option sizing requires the resolver's positive integral lot size, floors budget
 mode to complete lots, and rejects a budget below one lot. These calculations do
 not choose a mode, reduce for broker funds, or place an order.
-An active segment must provide its sizing mode and value in the protected setup
-file. Fixed values must be whole shares/lots; budget values may contain paise.
+Active F&O must provide its lot sizing mode/value. Delivery equity must provide its
+fixed-fractional values. No calculation reduces quantity after insufficient cash.
+
+The delivery router selects only `CNC` when a trade fits within 95% of available
+cash and otherwise rejects; MTF is deferred. Lifecycle primitives encode 3-second
+connect, 5-second read, and 45-second LIMIT fill timeouts, reconciliation and
+confirmed cancellation before one retry, and no market conversion. The IST session
+policy allows entries only 09:16-15:10 on a proven open day, marks cancellation due
+at 15:10, and reconciliation/log rotation due at 15:35.
 
 The Telegram adapter uses one Telethon user session and registers only
 `NewMessage` for configured groups. It extracts Telegram's marked group,
@@ -120,14 +130,15 @@ depends on the open calendar and notification schedule.
 The runtime health coordinator refreshes Dhan authentication and combines the
 read-only broker probe with Telegram connection/authorization, SQLite integrity,
 emergency-stop state, and executor availability. It writes one secret-free audit
-event. Its schedule helper fixes the target at 08:00 Asia/Kolkata; exchange-day,
-late-run, retry, and notification policies remain explicit open inputs. Because
+event. Its schedule helper fixes the target at 08:00 Asia/Kolkata. Calendar
+decisions are fail-closed with an authenticated manual override; official BSE and
+special-session data, late-run, retry, and notification remain open. Because
 the write executor is absent, health can never report LIVE entry capability.
 
 Passing these checks produces `PASSED_CORE`, never “valid order” or “trade
 ready.” The pricing functions are not yet composed into final signal approval;
 sizing, funds, risk, mode, emergency stop, and broker-reconciliation gates remain
-mandatory and are not implemented.
+mandatory and are not yet composed into the processor.
 
 ## Development
 

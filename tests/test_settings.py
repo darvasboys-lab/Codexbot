@@ -22,7 +22,6 @@ def valid_values() -> dict[str, str]:
         "CODEXBOT_INSTRUMENT_CACHE_DIRECTORY": "/var/lib/codexbot/instruments",
         "CODEXBOT_INSTRUMENT_MAX_AGE_SECONDS": "3600",
         "CODEXBOT_MAX_ORDER_AMOUNT": "100000",
-        "CODEXBOT_MINIMUM_TRADE_FUNDS": "10000",
         "CODEXBOT_DAILY_LOSS_LIMIT": "5000",
         "CODEXBOT_TOTAL_EXPOSURE_LIMIT": "300000",
         "CODEXBOT_MAX_OPEN_POSITIONS": "5",
@@ -78,25 +77,42 @@ def test_active_equity_requires_all_unresolved_setup_price_values() -> None:
     values.update(
         {
             "CODEXBOT_EQUITY_PRICE_PERCENTAGE": "1.25",
-            "CODEXBOT_YAHOO_MAX_MARKET_AGE_SECONDS": "5",
-            "CODEXBOT_YAHOO_MAX_LOCAL_AGE_SECONDS": "2",
-            "CODEXBOT_EQUITY_SIZING_MODE": "FIXED",
-            "CODEXBOT_EQUITY_SIZING_VALUE": "10",
+            "CODEXBOT_YAHOO_MAX_MARKET_AGE_SECONDS": "3",
+            "CODEXBOT_YAHOO_MAX_LOCAL_AGE_SECONDS": "3",
+            "CODEXBOT_RISK_PERCENT_PER_TRADE": "1",
+            "CODEXBOT_MAX_CAPITAL_ALLOCATION_PERCENT": "10",
         }
     )
     configuration = configuration_from_mapping(values)
     assert str(configuration.settings.equity_price_percentage) == "1.25"
     assert configuration.settings.yahoo_maximum_market_age is not None
     assert configuration.settings.yahoo_maximum_local_age is not None
-    assert configuration.settings.yahoo_maximum_market_age.total_seconds() == 5
-    assert configuration.settings.yahoo_maximum_local_age.total_seconds() == 2
+    assert configuration.settings.yahoo_maximum_market_age.total_seconds() == 3
+    assert configuration.settings.yahoo_maximum_local_age.total_seconds() == 3
+
+
+def test_active_equity_rejects_stale_age_and_requires_fractional_values() -> None:
+    values = valid_values()
+    values.update(
+        {
+            "CODEXBOT_EQUITY_ACTIVE": "true",
+            "CODEXBOT_EQUITY_PRICE_PERCENTAGE": "1.25",
+            "CODEXBOT_YAHOO_MAX_MARKET_AGE_SECONDS": "4",
+            "CODEXBOT_YAHOO_MAX_LOCAL_AGE_SECONDS": "3",
+        }
+    )
+    with pytest.raises(SettingsError, match="cannot exceed 3 seconds"):
+        configuration_from_mapping(values)
+
+    values["CODEXBOT_YAHOO_MAX_MARKET_AGE_SECONDS"] = "3"
+    with pytest.raises(SettingsError, match="fixed-fractional"):
+        configuration_from_mapping(values)
 
 
 def test_active_segment_requires_all_risk_values() -> None:
     values = valid_values()
     for name in (
         "CODEXBOT_MAX_ORDER_AMOUNT",
-        "CODEXBOT_MINIMUM_TRADE_FUNDS",
         "CODEXBOT_DAILY_LOSS_LIMIT",
         "CODEXBOT_TOTAL_EXPOSURE_LIMIT",
         "CODEXBOT_MAX_OPEN_POSITIONS",

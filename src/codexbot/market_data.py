@@ -34,6 +34,8 @@ class EquityQuote:
     received_at: datetime
     currency: str
     exchange_name: str
+    previous_minute_close: Decimal
+    previous_day_close: Decimal
 
     def age_at(self, evaluated_at: datetime) -> timedelta:
         return _aware_utc(evaluated_at) - self.observed_at
@@ -81,7 +83,7 @@ class YahooFinanceMarketData:
         *,
         transport: JsonTransport | None = None,
         clock: Callable[[], datetime] | None = None,
-        timeout_seconds: float = 5.0,
+        timeout_seconds: float = 3.0,
     ) -> None:
         if timeout_seconds <= 0:
             raise ValueError("timeout_seconds must be positive")
@@ -95,11 +97,19 @@ class YahooFinanceMarketData:
         url = f"{self._BASE_URL}/{encoded_ticker}?interval=1m&range=1d"
         try:
             payload = self._transport.get_json(url, timeout_seconds=self._timeout_seconds)
-            meta = _extract_meta(payload)
+            result = _extract_result(payload)
+            meta = _mapping(result.get("meta"), "quote metadata")
             price = _positive_decimal(meta.get("regularMarketPrice"), "regularMarketPrice")
             observed_at = _epoch_datetime(meta.get("regularMarketTime"))
             currency = _required_text(meta.get("currency"), "currency")
             exchange_name = _required_text(meta.get("exchangeName"), "exchangeName")
+            previous_minute_close = _previous_minute_close(
+                result, market_epoch=int(observed_at.timestamp())
+            )
+            previous_day_close = _positive_decimal(
+                meta.get("chartPreviousClose", meta.get("previousClose")),
+                "chartPreviousClose",
+            )
         except MarketDataError:
             raise
         except Exception as error:
@@ -113,6 +123,8 @@ class YahooFinanceMarketData:
             received_at=_aware_utc(self._clock()),
             currency=currency,
             exchange_name=exchange_name,
+            previous_minute_close=previous_minute_close,
+            previous_day_close=previous_day_close,
         )
 
 
@@ -127,7 +139,7 @@ def _ticker(symbol: str, exchange: YahooExchange) -> str:
     return f"{base}.{exchange.value}"
 
 
-def _extract_meta(payload: object) -> Mapping[str, object]:
+def _extract_result(payload: object) -> Mapping[str, object]:
     root = _mapping(payload, "response")
     chart = _mapping(root.get("chart"), "chart")
     if chart.get("error") is not None:
@@ -135,8 +147,34 @@ def _extract_meta(payload: object) -> Mapping[str, object]:
     result = chart.get("result")
     if not isinstance(result, list) or len(result) != 1:
         raise MarketDataError("Yahoo Finance returned no unique quote result")
-    result_item = _mapping(result[0], "chart result")
-    return _mapping(result_item.get("meta"), "quote metadata")
+    return _mapping(result[0], "chart result")
+
+
+def _previous_minute_close(result: Mapping[str, object], *, market_epoch: int) -> Decimal:
+    timestamps = result.get("timestamp")
+    if not isinstance(timestamps, list):
+        raise MarketDataError("Yahoo Finance 1-minute timestamps are missing or invalid")
+    indicators = _mapping(result.get("indicators"), "indicators")
+    quotes = indicators.get("quote")
+    if not isinstance(quotes, list) or len(quotes) != 1:
+        raise MarketDataError("Yahoo Finance 1-minute quote series is missing or invalid")
+    quote_series = _mapping(quotes[0], "1-minute quote series")
+    closes = quote_series.get("close")
+    if not isinstance(closes, list) or len(closes) != len(timestamps):
+        raise MarketDataError("Yahoo Finance 1-minute closes are missing or invalid")
+    current_minute = market_epoch - market_epoch % 60
+    candidates: list[tuple[int, object]] = []
+    for raw_timestamp, raw_close in zip(timestamps, closes, strict=True):
+        if isinstance(raw_timestamp, bool) or not isinstance(raw_timestamp, (int, float)):
+            raise MarketDataError("Yahoo Finance 1-minute timestamp is invalid")
+        timestamp = int(raw_timestamp)
+        if timestamp >= current_minute:
+            continue
+        candidates.append((timestamp, raw_close))
+    if not candidates:
+        raise MarketDataError("Yahoo Finance previous 1-minute close is unavailable")
+    latest_close = max(candidates, key=lambda candidate: candidate[0])[1]
+    return _positive_decimal(latest_close, "previous 1-minute close")
 
 
 def _mapping(value: object, field_name: str) -> Mapping[str, object]:

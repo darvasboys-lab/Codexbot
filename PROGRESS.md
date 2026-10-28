@@ -16,8 +16,10 @@ are tracked separately so offline tests cannot be mistaken for deployment proof.
 | Signal authentication, freshness, parser, and checker | Implemented offline | Credentialed Telegram TEST still required |
 | SQLite WAL audit, deduplication, maintenance | Implemented offline | VM backup schedule, retention, and restore drill remain open |
 | Dhan instrument resolver and atomic cache | Implemented and public-data tested | Production refresh frequency and maximum age required |
-| Yahoo equity and option price calculations | Implemented offline | Yahoo percentage/ages and Dhan tick-unit conversion required |
-| Fixed/budget sizing and risk cap primitives | Implemented offline | Funds policy and actual setup values required |
+| Yahoo equity and option price calculations | Implemented offline | Equity percentage and Dhan tick-unit conversion required |
+| Quote integrity and anomaly gates | Implemented offline | 3s tick/local, 3% minute, 5% daily, 24h EOD; credentialed feed evidence required |
+| Fixed-fractional sizing and capital risk | Implemented offline | Exact risk/allocation values and sector classification evidence required |
+| Delivery-only routing and session policy | Implemented offline | Executor absent; BSE calendar and failure actions remain open |
 | Telegram listener and log-group reporting | Implemented offline | Operator-attended session and configured-group TEST required |
 | Dhan authentication and read-only reconciliation | Implemented offline | Dhan credentials and account read-only TEST required |
 | Emergency stop and SSH status | Implemented offline | VM permissions and pending-order cancellation require later executor |
@@ -31,36 +33,50 @@ are tracked separately so offline tests cannot be mistaken for deployment proof.
 - Python 3.12 locked environment: passing.
 - Ruff: passing.
 - Strict mypy: passing.
-- Automated tests: 205 passing.
+- Automated tests: 226 passing.
 - GitHub CI: required for every push to `main`.
 - Broker write methods: absent.
 - Paper trading and simulated portfolio state: absent.
+
+## Decisions resolved in this increment
+
+- Funds: keep 5% of starting capital unallocated, treat 95% of available funds as
+  spendable, and reject rather than reduce when the proposed entry does not fit.
+- Equity product: delivery/CNC only for this stage; MTF is deferred.
+- Data quality: 3-second tick/local ages, 3% previous-minute anomaly, 5%
+  previous-day anomaly, and 24-hour daily-data age.
+- Risk: 2% daily-capital halt, 1% position hard-stop signal, and three open
+  positions per sector.
+- Lifecycle: 3-second connect, 5-second read, 45-second LIMIT fill, reconcile and
+  confirm cancellation before one retry; market conversion remains disabled.
+- Session: 08:45 initialization, 09:16-15:10 entries, 15:10 entry halt/cancel due,
+  and 15:35 reconciliation/log rotation due.
 
 ## Decisions and inputs blocking composition
 
 | ID | Decision/input | Blocks |
 | --- | --- | --- |
-| D-01 | Yahoo percentage above market, maximum market age, maximum local age | Equity price gate composition |
+| D-01 | Yahoo percentage above market (3-second market/local ages are resolved) | Equity price gate composition |
 | D-02 | Verified Dhan raw tick conversion to rupee price increment | Final option/equity tick rounding |
-| D-03 | Minimum funds meaning; insufficient funds reject versus reduce | Funds and final risk decision |
-| D-04 | Delivery versus MTF; NSE/BSE selection rule | Equity product and instrument selection |
-| D-05 | Equity/option initial timeout, retry timeout, retry price | Partial-fill one-retry state machine |
-| D-06 | TEST/LIVE transition, end-of-day, and restart backlog policies | Runtime lifecycle and reconciliation actions |
-| D-07 | Official exchange calendar, missed 08:00 run, retry/alert behavior | Automated daily health schedule |
+| D-04 | NSE/BSE selection rule (delivery now; MTF deferred) | Equity instrument selection |
+| D-05 | Retry price/recalculation rule (3s/5s network and 45s fill resolved) | Partial-fill one-retry state machine |
+| D-06 | TEST/LIVE transition and restart backlog (delivery EOD times resolved) | Runtime lifecycle actions |
+| D-07 | BSE/special-session calendar, missed 08:00 run, retry/alert behavior | Automated daily health schedule |
 | D-08 | AI provider, data policy, eligible rechecks, cost and timeout | Advisory AI layer |
-| D-09 | Actual groups, source IDs, log destination, risk and sizing values | Credentialed TEST configuration |
+| D-09 | Groups/source IDs/log, absolute limits, starting-capital source, sector map, risk %, exact 10-15% allocation | Credentialed TEST configuration |
 | D-10 | GCP project, region/zone, budget, backup and logging retention | New VM plan |
 | D-11 | Redacted equity BUY/SELL and more malformed examples | Remaining parser coverage |
 | D-12 | Dhan confirmation for post-April-2026 client algo/static-IP/hosting rules | Any LIVE executor implementation |
 
 ## Next safe work queue
 
-1. Add audit-derived daily summary delivery and terminal history views.
-2. Add authenticated feedback command storage without automatic rule changes or
+1. Add authenticated feedback command storage without automatic rule changes or
    replaying old messages.
-3. Add read-only Dhan margin-calculator parsing and MTF evidence gates.
-4. Compose pricing, sizing, and risk only after the corresponding decision IDs
-   are answered; every rejection remains before the option duplicate claim.
+2. Compose quote, sizing, delivery routing, capital, sector, and session gates
+   after D-01/D-04/D-05/D-09 are answered; all rejections precede dedup.
+3. Add dynamic NSE calendar cache/validation and terminal override history; keep
+   BSE closed until its official source is verified.
+4. Add audit-derived daily summary delivery and terminal history views.
 5. Prepare the new VM plan after D-10 is supplied; deployment remains a separate
    approval step.
 

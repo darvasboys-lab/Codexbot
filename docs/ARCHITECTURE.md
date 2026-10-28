@@ -66,22 +66,24 @@ list is never evidence that order submission is authorized.
   the broker side of later reconciliation. Their combined view is non-atomic and
   cannot itself authorize a retry or exit. A completed combined view is then
   persisted atomically in append-only observation tables. Margin remains planned.
-- **Risk engine:** configured caps and portfolio-aware entry authorization.
-  The implemented pure layer applies order-value, daily-loss, exposure,
-  open-position, and daily-trade caps. It always reports the unresolved
-  minimum-funds policy and cannot authorize entry.
-- **Sizing:** isolated fixed-share, equity-budget, fixed-lot, and option-budget
-  calculations. Budget modes floor to whole tradable units and reject below one
-  share/lot. Protected setup requires an explicit mode/value for each active
-  segment and accepts only whole fixed units.
+- **Risk engine:** configured caps and portfolio-aware entry authorization. The
+  pure layer applies order value, loss, exposure, position/trade counts, a 5% cash
+  floor, 95% spendable funds, 2% daily halt, 1% position stop signal, and a
+  three-position sector cap. Authorization requires current account/sector facts.
+- **Sizing/routing:** isolated legacy fixed/budget calculations plus delivery-stage
+  fixed-fractional sizing, with exact risk percentage and a selected 10-15%
+  allocation cap. Pure routing selects CNC only within 95% of available cash and
+  rejects otherwise; MTF is absent from the current route.
 - **Execution/reconciliation:** LIVE-only order intents, duplicate-submission
   controls, state reconciliation, bounded partial-fill retry, and protection
   exits. Dhan correlation IDs are not assumed to provide idempotency.
-- **Yahoo market data and pricing:** read-only NSE/BSE equity quote retrieval. Each accepted
-  response contains a positive price, Yahoo market timestamp, local receipt
-  timestamp, currency, and exchange. A separate policy requires explicit market
-  and local age limits and setup percentage. Option pricing applies the approved
-  4% ceiling and floors to a verified price tick.
+- **Yahoo market data and pricing:** read-only NSE/BSE quote retrieval with price,
+  market/receipt timestamps, prior minute/day closes, currency, and exchange.
+  Policy enforces 3-second ages, 3%/5% anomalies, 24-hour daily data, and the
+  explicit setup percentage. Option pricing applies the approved 4% ceiling.
+- **Session/calendar policy:** pure IST phase decisions allow entries only
+  09:16-15:10 on proven open days. Dynamic calendar failure remains closed unless
+  an authenticated cautionary override follows validated local holiday checks.
 - **Journal:** SQLite WAL database containing immutable first receipts,
   append-only audit/control facts, and atomic option deduplication decisions.
   Emergency stop defaults to engaged and is checked before a duplicate claim.
@@ -105,8 +107,9 @@ credentials. The loader requires service-user ownership, a regular non-symlink
 file, and mode `0600` or stricter. It accepts only documented keys and performs no
 shell expansion. TEST is the sole default; both segment flags, source identities,
 paths, instrument age, Telegram credentials/session path, and Dhan TOTP inputs are
-explicit. Active equity also requires both Yahoo age limits and the percentage
-above market. Any active segment requires all six positive risk values. Secret
+explicit. Active equity also requires Yahoo ages no greater than 3 seconds, the
+percentage above market, and fixed-fractional values. Any active segment requires
+all five positive absolute risk values. Secret
 value objects render only `<redacted>` and require an explicit
 adapter call to reveal their value.
 

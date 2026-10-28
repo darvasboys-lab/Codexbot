@@ -42,6 +42,39 @@ class SizeResult:
     notional: Decimal
 
 
+@dataclass(frozen=True, slots=True)
+class FixedFractionalPolicy:
+    """Explicit capital-risk inputs; the approved 10-15% range has no default."""
+
+    risk_percent_per_trade: Decimal
+    maximum_capital_allocation_percent: Decimal
+
+    def __post_init__(self) -> None:
+        if (
+            not self.risk_percent_per_trade.is_finite()
+            or self.risk_percent_per_trade <= 0
+            or self.risk_percent_per_trade > Decimal("1.0")
+        ):
+            raise ValueError("risk percent per trade must be greater than 0 and at most 1")
+        if not self.maximum_capital_allocation_percent.is_finite() or not Decimal(
+            "10"
+        ) <= self.maximum_capital_allocation_percent <= Decimal("15"):
+            raise ValueError("maximum capital allocation percent must be between 10 and 15")
+
+
+@dataclass(frozen=True, slots=True)
+class FixedFractionalSizeResult:
+    quantity: int
+    lots: int | None
+    risk_budget: Decimal
+    capital_allocation_ceiling: Decimal
+    risk_based_quantity: int
+    allocation_based_quantity: int
+    entry_price: Decimal
+    stop_loss_price: Decimal
+    notional: Decimal
+
+
 def size_equity_fixed_shares(*, shares: int, limit_price: Decimal) -> SizeResult:
     """Return an explicit positive share count."""
 
@@ -109,6 +142,94 @@ def size_option_budget(*, budget: Decimal, lot_size: Decimal, limit_price: Decim
         unit_price=limit_price,
         notional=limit_price * quantity,
     )
+
+
+def size_equity_fixed_fractional(
+    *,
+    total_capital: Decimal,
+    entry_price: Decimal,
+    stop_loss_price: Decimal,
+    policy: FixedFractionalPolicy,
+) -> FixedFractionalSizeResult:
+    """Floor shares by both loss-at-stop risk and the configured allocation cap."""
+
+    risk_budget, allocation_ceiling, risk_units, allocation_units = _fractional_limits(
+        total_capital=total_capital,
+        entry_price=entry_price,
+        stop_loss_price=stop_loss_price,
+        policy=policy,
+    )
+    quantity = min(risk_units, allocation_units)
+    if quantity < 1:
+        raise SizingError("FIXED_FRACTIONAL_CANNOT_BUY_ONE_SHARE")
+    return FixedFractionalSizeResult(
+        quantity=quantity,
+        lots=None,
+        risk_budget=risk_budget,
+        capital_allocation_ceiling=allocation_ceiling,
+        risk_based_quantity=risk_units,
+        allocation_based_quantity=allocation_units,
+        entry_price=entry_price,
+        stop_loss_price=stop_loss_price,
+        notional=entry_price * quantity,
+    )
+
+
+def size_option_fixed_fractional(
+    *,
+    total_capital: Decimal,
+    entry_price: Decimal,
+    stop_loss_price: Decimal,
+    lot_size: Decimal,
+    policy: FixedFractionalPolicy,
+) -> FixedFractionalSizeResult:
+    """Floor the risk-limited quantity again to complete listed option lots."""
+
+    lot_units = _lot_units(lot_size)
+    risk_budget, allocation_ceiling, risk_units, allocation_units = _fractional_limits(
+        total_capital=total_capital,
+        entry_price=entry_price,
+        stop_loss_price=stop_loss_price,
+        policy=policy,
+    )
+    raw_quantity = min(risk_units, allocation_units)
+    lots = raw_quantity // lot_units
+    if lots < 1:
+        raise SizingError("FIXED_FRACTIONAL_CANNOT_BUY_ONE_LOT")
+    quantity = lots * lot_units
+    return FixedFractionalSizeResult(
+        quantity=quantity,
+        lots=lots,
+        risk_budget=risk_budget,
+        capital_allocation_ceiling=allocation_ceiling,
+        risk_based_quantity=risk_units,
+        allocation_based_quantity=allocation_units,
+        entry_price=entry_price,
+        stop_loss_price=stop_loss_price,
+        notional=entry_price * quantity,
+    )
+
+
+def _fractional_limits(
+    *,
+    total_capital: Decimal,
+    entry_price: Decimal,
+    stop_loss_price: Decimal,
+    policy: FixedFractionalPolicy,
+) -> tuple[Decimal, Decimal, int, int]:
+    _positive_budget(total_capital)
+    _positive_price(entry_price)
+    _positive_price(stop_loss_price)
+    if stop_loss_price >= entry_price:
+        raise SizingError("STOP_LOSS_MUST_BE_BELOW_ENTRY")
+    loss_per_unit = entry_price - stop_loss_price
+    risk_budget = total_capital * policy.risk_percent_per_trade / Decimal(100)
+    allocation_ceiling = total_capital * policy.maximum_capital_allocation_percent / Decimal(100)
+    risk_units = int((risk_budget / loss_per_unit).to_integral_value(rounding=ROUND_FLOOR))
+    allocation_units = int(
+        (allocation_ceiling / entry_price).to_integral_value(rounding=ROUND_FLOOR)
+    )
+    return risk_budget, allocation_ceiling, risk_units, allocation_units
 
 
 def _positive_price(value: Decimal) -> None:

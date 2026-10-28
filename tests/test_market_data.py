@@ -23,7 +23,14 @@ class StubTransport:
         return self.payload
 
 
-def payload(*, price: object = 1_250.5, timestamp: object | None = None) -> object:
+def payload(
+    *,
+    price: object = 1_250.5,
+    timestamp: object | None = None,
+    previous_minute_close: object = 1_249.0,
+    previous_day_close: object = 1_240.0,
+) -> object:
+    market_timestamp = timestamp if timestamp is not None else int(NOW.timestamp())
     return {
         "chart": {
             "error": None,
@@ -31,12 +38,13 @@ def payload(*, price: object = 1_250.5, timestamp: object | None = None) -> obje
                 {
                     "meta": {
                         "regularMarketPrice": price,
-                        "regularMarketTime": timestamp
-                        if timestamp is not None
-                        else int(NOW.timestamp()),
+                        "regularMarketTime": market_timestamp,
                         "currency": "INR",
                         "exchangeName": "NSI",
-                    }
+                        "chartPreviousClose": previous_day_close,
+                    },
+                    "timestamp": [int(NOW.timestamp()) - 120, int(NOW.timestamp()) - 60],
+                    "indicators": {"quote": [{"close": [1248.0, previous_minute_close]}]},
                 }
             ],
         }
@@ -64,6 +72,8 @@ def test_yahoo_adapter_returns_timestamped_equity_quote(
     assert quote.price == Decimal("1250.5")
     assert quote.observed_at == NOW
     assert quote.received_at == NOW + timedelta(milliseconds=50)
+    assert quote.previous_minute_close == Decimal("1249.0")
+    assert quote.previous_day_close == Decimal("1240.0")
     assert transport.urls == [
         f"https://query1.finance.yahoo.com/v8/finance/chart/{expected_ticker}?interval=1m&range=1d"
     ]
@@ -100,6 +110,8 @@ def test_quote_freshness_requires_caller_supplied_maximum_age() -> None:
         {"chart": {"error": None, "result": []}},
         payload(price=0),
         payload(timestamp="not-a-timestamp"),
+        payload(previous_minute_close=None),
+        payload(previous_day_close=None),
     ],
 )
 def test_yahoo_adapter_fails_closed_on_invalid_response(bad_payload: object) -> None:

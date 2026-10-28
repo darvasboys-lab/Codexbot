@@ -65,11 +65,14 @@ answer. Code must not turn an open decision into an implicit default.
   rejections when available, but cannot override deterministic validation or
   change rules without approval.
 - Support NSE/BSE equities. Equity entry uses a validated current price plus a
-  setup percentage and a `LIMIT` order. Product is delivery or MTF, selected in
-  setup.
-- Fixed equity shares and equity budget calculations are implemented as separate
-  pure strategies. Budget mode floors to whole shares and rejects below one share;
-  setup selects exactly one strategy and positive value when equity is active.
+  setup percentage and a `LIMIT` order. Delivery (`CNC`) is the only equity route
+  in the current stage. MTF is deferred.
+- Delivery equity uses fixed-fractional sizing. Setup supplies the exact risk
+  percentage per trade greater than zero and no more than the 1% position-loss
+  cap, plus an allocation cap from 10% through 15% of starting
+  capital. Quantity is the smaller whole-share result from
+  `(capital × risk%) / (entry − stop)` and the allocation cap. Reject below one
+  share. Earlier fixed-share and budget calculators remain isolated primitives.
 - Resolve instruments from Dhan's official detailed instrument-master schema.
   Require exact NSE/BSE exchange metadata, instrument type, security ID,
   underlying security ID for stock options, option type, strike, expiry, positive
@@ -84,13 +87,15 @@ answer. Code must not turn an open decision into an implicit default.
   atomic current pointer, verify size/checksum/age on load, retain last-known-good
   data after refresh failure, use restrictive permissions, and keep bounded old
   snapshots. A stale or corrupt cache fails closed.
-- Use Yahoo Finance for equity market prices for now. The adapter must retain the
-  Yahoo market timestamp and local receipt timestamp and fail closed on missing,
-  malformed, non-positive, or non-unique responses. No other market-data API is
-  requested at this stage.
-- When equity is active, setup must explicitly provide the percentage above
-  market, maximum Yahoo market-timestamp age, and maximum local response age.
-  Missing values fail startup; there are no defaults for these open values.
+- Use Yahoo Finance for equity market prices for now. The adapter retains the
+  Yahoo market timestamp, local receipt timestamp, previous completed one-minute
+  close, and previous-day close. It fails closed on missing, malformed,
+  non-positive, or non-unique responses. No other market-data API is requested.
+- A tick and its local receipt must each be no more than 3 seconds old at
+  evaluation; allow the existing 2-second future tolerance. Reject a tick more
+  than 3% from the previous one-minute close or more than 5% from the previous
+  day's close. Daily-timeframe data must be no more than 24 hours old. Active
+  equity still requires the setup percentage above market.
 - Support stock-option `BUY` only. Require a stated price. The upper entry ceiling
   is that price multiplied by `1.04`; round down to a verified price tick so tick
   handling never exceeds the ceiling.
@@ -103,12 +108,16 @@ answer. Code must not turn an open decision into an implicit default.
 - Stop loss and target are setup values, with the previously chosen defaults of
   3% each based on actual fills. Telegram SL/target text is ignored. Prevent
   over-exits and reconcile state on restart.
-- Risk setup includes maximum order amount, minimum trade funds, daily loss,
-  total exposure, open positions, and daily trade count.
-- All six risk settings are mandatory and positive when either segment is active;
-  none has a production default. The five clear hard caps are implemented as a
-  pure evaluator. It cannot authorize entry while minimum-funds semantics remain
-  unresolved.
+- Risk setup includes maximum order amount, daily loss, total exposure, open
+  positions, and daily trade count. Halt new entries at 2%
+  accumulated daily loss from starting capital, require a hard stop-management
+  action when one position loses 1% of starting capital, and cap new positions at
+  three in the same sector.
+- All five absolute risk settings are mandatory and positive when either segment
+  is active. Keep 5% of starting capital as cash after a proposed entry and treat
+  only 95% of currently available funds as spendable. Insufficient cash rejects;
+  quantity is not silently reduced. Authorization requires current account and
+  sector data; there is no separate ambiguous minimum-funds setting.
 - Emergency stop blocks new entries, cancels pending entries, continues managing
   filled positions, and exposes a separate explicit close action.
 - The durable emergency-stop entry gate fails closed on a new database. Only an
@@ -118,6 +127,19 @@ answer. Code must not turn an open decision into an implicit default.
 - Reconcile an uncertain submission outcome before any retry. On partial fill
   after timeout, manage actual fills and make at most one retry for the unfilled
   quantity only after confirming the original remainder is cancelled.
+- API connect timeout is 3 seconds and response/read timeout is 5 seconds. A LIMIT
+  fill timeout is 45 seconds. Reconcile status before action and confirm remainder
+  cancellation before the one retry. Market conversion is disabled under the
+  LIMIT-only scope; the retry-price calculation remains unresolved.
+- On an open day, initialization runs 08:45-09:15 Asia/Kolkata with no entries,
+  followed by a no-entry guard until 09:16. Normal entry runs 09:16-15:10. From
+  15:10, halt entries and mark pending-entry cancellation due. Delivery positions
+  carry; MIS is outside current scope. At 15:35 reconciliation/log rotation are due.
+- Dynamic exchange calendar data is authoritative. On failure, weekends and dates
+  in the validated local annual file stay closed. Any other weekday stays closed
+  until an authenticated manual open override, marked cautionary. The repository
+  contains the official NSE 2026 CM/FO fallback; BSE stays closed without its
+  separately verified official fallback.
 - Log recognized, rejected/filtered messages and reasons, validations, orders,
   errors, and a daily summary. Preserve an authenticated, immutable audit trail.
 - The initial log-group format is plain text and excludes raw message and
@@ -138,41 +160,40 @@ answer. Code must not turn an open decision into an implicit default.
    and implemented without archive code. Supply redacted equity BUY, SELL,
    expiry-omitted non-index stock-option, and additional malformed-message
    examples before expanding those forms.
-2. **Equity quote policy:** supply the maximum accepted age for Yahoo's market
-   timestamp, the maximum local response age, and the percentage above market.
-   Yahoo officially describes this data as informational and lists BSE as delayed
-   by 15 minutes; these limits must be explicit before quote-based entry validation
-   can pass.
+2. **Equity entry percentage:** ages are fixed at 3 seconds and anomalies at
+   3%/5%. Supply the percentage above market. Yahoo describes this data as
+   informational and lists BSE as delayed by 15 minutes; data that cannot meet the
+   approved limits fails closed.
 3. **Option tick units:** floor-to-tick pricing is implemented. Dhan's detailed
    master currently supplies raw values such as `5.0000`; verify their price-unit
    conversion from current official/broker guidance before connecting that field
    to the calculation.
-4. **Sizing priority:** choose fixed shares/lots versus budget when both are
-   configured; decide whether insufficient funds always rejects or may reduce
-   quantity; define whether minimum-trade-funds is checked before an entry or
-   retained after it. This open policy is an explicit risk-evaluation blocker.
-5. **Equity product:** choose delivery or MTF and define Dhan MTF
-   eligibility/margin checks after broker support is verified.
+4. **Sizing values:** supply the exact fixed-fractional risk percentage and select
+   the exact allocation cap from 10% through 15%.
+5. **Equity product:** delivery/CNC is selected now. MTF eligibility, consent, and
+   stock-specific margin checks remain a later-stage feature.
 6. **Futures:** confirm whether stock futures are in scope. “OK” is not treated as
    approval. Futures remain blocked.
-7. **Timeouts:** set equity initial timeout, option initial timeout, retry timeout,
-   and retry-price rule.
+7. **Retry pricing:** fill timeout is 45 seconds, connect timeout 3 seconds, and
+   read timeout 5 seconds. Supply the one-retry price/recalculation rule.
 8. **Mode changes:** define handling of pending entries, exits, and open
     positions when changing `TEST`/`LIVE`.
-9. **End of day:** define each product's pending-order and open-position policy.
+9. **End of day:** delivery-stage times are approved. Failure handling during
+   future cancellation/reconciliation and exit-protection behavior remain open.
 10. **Restart gaps:** decide whether missed Telegram messages are logged only or
     may be evaluated; old messages must never become automatic trades.
-11. **Calendar and 08:00 health check:** use weekdays or the official exchange
-    trading calendar; define late/missed checks, token-refresh failure, service
-    failure, and notification retry semantics. Automatic reauthentication is not
-    assumed. The fixed 08:00 Asia/Kolkata instant and one-shot redacted component
-    health audit are implemented without selecting these open policies.
+11. **Calendar and 08:00 health check:** dynamic-failure/manual-open behavior is
+    approved. Add a verified official BSE fallback and special-session handling;
+    define local-calendar refresh/expiry, late/missed checks, token-refresh and
+    service failure, and notification retry. Automatic reauthentication is not
+    assumed.
 12. **AI review:** choose which filtered chatter/rejections invoke AI, provider,
     data policy, cost ceiling, latency deadline, timeout behavior, and authorized
     feedback commands.
 13. **Risk and setup values:** provide the actual risk limits, active segments,
     group IDs, log destination, optional private broker-ack destination, equity
-    percentage, sizing values, and SL/target confirmation.
+    percentage, sizing values, starting-capital source, sector classification
+    source, and SL/target confirmation.
 14. **Infrastructure:** provide the GCP project, region/zone, VM budget/size,
     backup/retention needs, and logging budget when VM work begins.
 15. **Audit operations:** choose production retention, backup schedule/location,

@@ -77,8 +77,9 @@ than approved parser behavior.
   current calendar month and rejection unless exactly one listed contract matches.
 - Separate equity/F&O modes and per-channel trading switches that conflict with
   one common TEST/LIVE switch plus global segment active flags.
-- Static JSON holidays, weekday-only AMO decisions, and missing-holiday fail-open
-  behavior.
+- Static holidays used as sole truth, weekday-only AMO decisions, and
+  missing-holiday fail-open behavior. Codexbot's small local file is only a
+  fail-closed fallback behind dynamic official data and manual authorization.
 
 ## Unsafe or ambiguous archive behavior
 
@@ -109,7 +110,8 @@ informational purposes and is not intended for trading or investing. It currentl
 lists NSE (`.NS`) as real-time and BSE (`.BO`) as delayed by 15 minutes. Udit
 subsequently approved Yahoo Finance as the equity market-data source for the
 current phase and asked that no other market-data API be pursued now. The new
-adapter validates price and timestamps and never copies the archive fallback.
-Maximum age limits and all other pre-LIVE gates remain unresolved.
+adapter validates price, timestamps, and prior minute/day references and never
+copies the archive fallback. The approved market/local limit is 3 seconds with
+3%/5% anomaly checks; all other pre-LIVE evidence gates still apply.
 
 Official source: [Yahoo Finance exchanges and data providers](https://help.yahoo.com/kb/finance-for-web/exchanges-data-providers-yahoo-finance-sln2310.html)

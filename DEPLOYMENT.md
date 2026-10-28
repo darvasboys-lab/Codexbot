@@ -29,10 +29,12 @@ The loader now enforces service-user ownership, regular-file type, no symlink,
 and mode `0600` or stricter. [.env.example](.env.example) documents required names
 without values. VM setup must create the populated file outside the checkout and
 must never pass PIN/TOTP/session credentials as command-line arguments.
-Any active segment also requires six explicit positive risk settings; startup
-fails if the set is missing or partial. Deployment templates must not invent
-values for these operator decisions. Each active segment also requires an
-explicit `FIXED` or `BUDGET` sizing mode and value; fixed values are whole units.
+Any active segment also requires five explicit positive absolute risk settings;
+startup fails if the set is missing or partial. Templates must not invent values.
+Active delivery equity additionally requires an exact risk percentage, an exact
+10-15% allocation selection, the price percentage, and Yahoo ages no greater than
+3 seconds. Risk per trade must be greater than zero and no more than 1%. Active
+F&O requires explicit lot sizing. Fixed values are whole units.
 
 Telegram authorization must occur in a separate operator-attended setup step.
 The unattended service refuses a missing or unauthorized session. The session
@@ -52,8 +54,16 @@ failed health check. Failure and holiday semantics remain open.
 The one-shot coordinator and exact 08:00 Asia/Kolkata conversion are implemented.
 It audits component/error codes, token expiry, stop state, and the absent executor
 without recording the token, credentials, account balance, or Telegram content.
-The VM timer must remain disabled until the official calendar, missed-run, retry,
-and log-group notification behavior is approved.
+The VM timer must remain disabled until dynamic calendar caching, official BSE and
+special-session data, missed-run, retry, and log-group notification are completed.
+The fail-closed fallback requires an authenticated manual override before opening a
+weekday when the dynamic calendar is unavailable.
+
+Network clients use a 3-second connect and 5-second read policy. The future LIMIT
+executor will use the approved 45-second fill timeout and must reconcile uncertain
+state and confirm cancellation before one retry. No market conversion is allowed.
+Systemd timers will represent 08:45 initialization and 15:35 reconciliation only
+after their failure/retry behavior is reviewable.
 
 The runtime database is SQLite in WAL mode. Offline maintenance is exposed as
 `codexbot-db integrity`, `codexbot-db backup`, and `codexbot-db restore-test`.

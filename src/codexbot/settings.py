@@ -13,7 +13,7 @@ from pathlib import Path
 
 from codexbot.models import CheckerPolicy, ExecutionMode
 from codexbot.risk import RiskLimits
-from codexbot.sizing import SizingMode, SizingSelection
+from codexbot.sizing import FixedFractionalPolicy, SizingMode, SizingSelection
 
 
 class SettingsError(ValueError):
@@ -70,8 +70,8 @@ class BotSettings:
     yahoo_maximum_market_age: timedelta | None = None
     yahoo_maximum_local_age: timedelta | None = None
     risk_limits: RiskLimits | None = None
-    equity_sizing: SizingSelection | None = None
     option_sizing: SizingSelection | None = None
+    equity_fixed_fractional_policy: FixedFractionalPolicy | None = None
 
     def checker_policy(self) -> CheckerPolicy:
         return CheckerPolicy(
@@ -122,6 +122,7 @@ def configuration_from_mapping(values: Mapping[str, str]) -> RuntimeConfiguratio
     yahoo_maximum_local_age = _optional_positive_duration(
         values, "CODEXBOT_YAHOO_MAX_LOCAL_AGE_SECONDS"
     )
+    approved_tick_age = timedelta(seconds=3)
     if equity_active and (
         equity_price_percentage is None
         or yahoo_maximum_market_age is None
@@ -130,16 +131,26 @@ def configuration_from_mapping(values: Mapping[str, str]) -> RuntimeConfiguratio
         raise SettingsError(
             "active equity requires price percentage and both Yahoo quote age limits"
         )
+    if equity_active:
+        assert yahoo_maximum_market_age is not None
+        assert yahoo_maximum_local_age is not None
+        if (
+            yahoo_maximum_market_age > approved_tick_age
+            or yahoo_maximum_local_age > approved_tick_age
+        ):
+            raise SettingsError("active equity Yahoo age limits cannot exceed 3 seconds")
 
     fno_active = _required_bool(values, "CODEXBOT_FNO_ACTIVE")
     segment_active = equity_active or fno_active
     risk_limits = _optional_risk_limits(values)
     if segment_active and risk_limits is None:
-        raise SettingsError("an active segment requires all six risk limit settings")
-    equity_sizing = _optional_sizing_selection(values, prefix="CODEXBOT_EQUITY")
+        raise SettingsError("an active segment requires all five absolute risk limit settings")
     option_sizing = _optional_sizing_selection(values, prefix="CODEXBOT_OPTION")
-    if equity_active and equity_sizing is None:
-        raise SettingsError("active equity requires an explicit sizing mode and value")
+    equity_fixed_fractional_policy = _optional_fixed_fractional_policy(values)
+    if equity_active and equity_fixed_fractional_policy is None:
+        raise SettingsError(
+            "active equity requires fixed-fractional risk and allocation percentages"
+        )
     if fno_active and option_sizing is None:
         raise SettingsError("active F&O requires an explicit option sizing mode and value")
 
@@ -160,8 +171,8 @@ def configuration_from_mapping(values: Mapping[str, str]) -> RuntimeConfiguratio
         yahoo_maximum_market_age=yahoo_maximum_market_age,
         yahoo_maximum_local_age=yahoo_maximum_local_age,
         risk_limits=risk_limits,
-        equity_sizing=equity_sizing,
         option_sizing=option_sizing,
+        equity_fixed_fractional_policy=equity_fixed_fractional_policy,
     )
     telegram = TelegramCredentials(
         api_id=_required_positive_int(values, "TELEGRAM_API_ID"),
@@ -312,7 +323,6 @@ def _optional_positive_duration(values: Mapping[str, str], name: str) -> timedel
 def _optional_risk_limits(values: Mapping[str, str]) -> RiskLimits | None:
     names = (
         "CODEXBOT_MAX_ORDER_AMOUNT",
-        "CODEXBOT_MINIMUM_TRADE_FUNDS",
         "CODEXBOT_DAILY_LOSS_LIMIT",
         "CODEXBOT_TOTAL_EXPOSURE_LIMIT",
         "CODEXBOT_MAX_OPEN_POSITIONS",
@@ -325,11 +335,10 @@ def _optional_risk_limits(values: Mapping[str, str]) -> RiskLimits | None:
         raise SettingsError("risk limit settings must be supplied together")
     return RiskLimits(
         maximum_order_amount=_required_positive_decimal(values, names[0]),
-        minimum_trade_funds=_required_positive_decimal(values, names[1]),
-        daily_loss_limit=_required_positive_decimal(values, names[2]),
-        total_exposure_limit=_required_positive_decimal(values, names[3]),
-        maximum_open_positions=_required_positive_int(values, names[4]),
-        maximum_daily_trades=_required_positive_int(values, names[5]),
+        daily_loss_limit=_required_positive_decimal(values, names[1]),
+        total_exposure_limit=_required_positive_decimal(values, names[2]),
+        maximum_open_positions=_required_positive_int(values, names[3]),
+        maximum_daily_trades=_required_positive_int(values, names[4]),
     )
 
 
@@ -364,6 +373,30 @@ def _optional_sizing_selection(values: Mapping[str, str], *, prefix: str) -> Siz
         raise SettingsError(str(error)) from error
 
 
+def _optional_fixed_fractional_policy(
+    values: Mapping[str, str],
+) -> FixedFractionalPolicy | None:
+    risk_name = "CODEXBOT_RISK_PERCENT_PER_TRADE"
+    allocation_name = "CODEXBOT_MAX_CAPITAL_ALLOCATION_PERCENT"
+    supplied = (
+        bool(values.get(risk_name, "").strip()),
+        bool(values.get(allocation_name, "").strip()),
+    )
+    if not any(supplied):
+        return None
+    if not all(supplied):
+        raise SettingsError(
+            "fixed-fractional risk and allocation percentages must be supplied together"
+        )
+    try:
+        return FixedFractionalPolicy(
+            risk_percent_per_trade=_required_positive_decimal(values, risk_name),
+            maximum_capital_allocation_percent=_required_positive_decimal(values, allocation_name),
+        )
+    except ValueError as error:
+        raise SettingsError(str(error)) from error
+
+
 _ENV_LINE = re.compile(r"(?:export\s+)?(?P<name>[A-Za-z_][A-Za-z0-9_]*)=(?P<value>.*)")
 _KNOWN_KEYS = frozenset(
     {
@@ -380,15 +413,14 @@ _KNOWN_KEYS = frozenset(
         "CODEXBOT_YAHOO_MAX_MARKET_AGE_SECONDS",
         "CODEXBOT_YAHOO_MAX_LOCAL_AGE_SECONDS",
         "CODEXBOT_MAX_ORDER_AMOUNT",
-        "CODEXBOT_MINIMUM_TRADE_FUNDS",
         "CODEXBOT_DAILY_LOSS_LIMIT",
         "CODEXBOT_TOTAL_EXPOSURE_LIMIT",
         "CODEXBOT_MAX_OPEN_POSITIONS",
         "CODEXBOT_MAX_DAILY_TRADES",
-        "CODEXBOT_EQUITY_SIZING_MODE",
-        "CODEXBOT_EQUITY_SIZING_VALUE",
         "CODEXBOT_OPTION_SIZING_MODE",
         "CODEXBOT_OPTION_SIZING_VALUE",
+        "CODEXBOT_RISK_PERCENT_PER_TRADE",
+        "CODEXBOT_MAX_CAPITAL_ALLOCATION_PERCENT",
         "TELEGRAM_API_ID",
         "TELEGRAM_API_HASH",
         "TELEGRAM_PHONE_NUMBER",

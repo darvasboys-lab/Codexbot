@@ -3,12 +3,15 @@ from decimal import Decimal
 import pytest
 
 from codexbot import (
+    FixedFractionalPolicy,
     SizingError,
     SizingMode,
     SizingSelection,
     size_equity_budget,
+    size_equity_fixed_fractional,
     size_equity_fixed_shares,
     size_option_budget,
+    size_option_fixed_fractional,
     size_option_fixed_lots,
 )
 
@@ -80,3 +83,56 @@ def test_setup_selection_requires_whole_fixed_units_but_allows_decimal_budget() 
     ).configured_value == Decimal("50000.50")
     with pytest.raises(ValueError, match="whole number"):
         SizingSelection(mode=SizingMode.FIXED, configured_value=Decimal("1.5"))
+
+
+def test_fixed_fractional_equity_uses_tighter_risk_or_allocation_limit() -> None:
+    result = size_equity_fixed_fractional(
+        total_capital=Decimal("100000"),
+        entry_price=Decimal("100"),
+        stop_loss_price=Decimal("97"),
+        policy=FixedFractionalPolicy(
+            risk_percent_per_trade=Decimal("1"),
+            maximum_capital_allocation_percent=Decimal("10"),
+        ),
+    )
+
+    assert result.risk_based_quantity == 333
+    assert result.allocation_based_quantity == 100
+    assert result.quantity == 100
+    assert result.notional == Decimal("10000")
+
+
+def test_fixed_fractional_option_floors_to_whole_lots() -> None:
+    result = size_option_fixed_fractional(
+        total_capital=Decimal("100000"),
+        entry_price=Decimal("20"),
+        stop_loss_price=Decimal("18"),
+        lot_size=Decimal("75"),
+        policy=FixedFractionalPolicy(
+            risk_percent_per_trade=Decimal("1"),
+            maximum_capital_allocation_percent=Decimal("15"),
+        ),
+    )
+
+    assert result.quantity == 450
+    assert result.lots == 6
+    assert result.notional == Decimal("9000")
+
+
+@pytest.mark.parametrize("allocation", ["9.99", "15.01"])
+def test_fractional_allocation_must_be_selected_within_approved_range(
+    allocation: str,
+) -> None:
+    with pytest.raises(ValueError, match="between 10 and 15"):
+        FixedFractionalPolicy(
+            risk_percent_per_trade=Decimal("1"),
+            maximum_capital_allocation_percent=Decimal(allocation),
+        )
+
+
+def test_fractional_risk_cannot_exceed_position_drawdown_cap() -> None:
+    with pytest.raises(ValueError, match="at most 1"):
+        FixedFractionalPolicy(
+            risk_percent_per_trade=Decimal("1.01"),
+            maximum_capital_allocation_percent=Decimal("10"),
+        )
