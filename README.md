@@ -190,6 +190,9 @@ for `CODEXBOT_MODE=LIVE`. It assembles the durable journal, parser, checker,
 official instrument resolver, Telegram listener, feedback intake, and log-group
 reporting. It contains no order submission, modification, or cancellation method.
 The review-only systemd example is in [deploy/README.md](deploy/README.md).
+The deployment directory also contains a target-locked, read-only inspection
+script and disabled health, log-rotation, and backup templates for the approved
+existing `auditbot` TEST VM. They create no network listener.
 
 SQLite maintenance commands operate on runtime files outside Git:
 

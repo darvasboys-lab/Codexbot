@@ -167,6 +167,10 @@ answer. Code must not turn an open decision into an implicit default.
 - Protect credentials and Telegram session data. Never commit either.
 - Exclude Notion, Google Sheets, Kite, Railway, other brokers, and changes to the
   existing deployment.
+- Deploy TEST only to the existing Debian 13 `auditbot` VM in project
+  `diamond-bot-511604`, zone `asia-south1-c`. Refuse any other target. Do not
+  create, replace, reimage, resize, or expose a port without separate approval,
+  and never modify the sapphairebot production VM.
 - Provide a runnable TEST observation service that loads only the protected
   environment and validated instrument cache, then composes the journal, parser,
   deterministic checker, resolver, Telegram listener, feedback, and reporting.

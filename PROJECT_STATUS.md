@@ -107,6 +107,10 @@ Status date: 2026-10-28 (Asia/Kolkata)
   a fresh validated instrument snapshot, builds the complete observation graph,
   and refuses `LIVE` with `LIVE_EXECUTOR_ABSENT`. A hardened review-only systemd
   example and preflight checklist are present but have not been deployed.
+- Target-locked read-only `auditbot` inspection, five-minute local health-check,
+  14-rotation application-log, and seven-day local-backup systemd templates. The
+  current managed workspace has no GCP identity or SSH/TCP connection, so none
+  has been run or installed on the VM.
 - Automated unit tests for implemented behavior and safety boundaries.
 - Completed reference-archive review with no source reuse; candidate formats,
   conflicts, and rejected legacy behavior are documented.

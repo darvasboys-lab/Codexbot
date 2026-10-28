@@ -1,0 +1,11 @@
+/var/log/codexbot/*.log {
+    daily
+    rotate 14
+    missingok
+    notifempty
+    compress
+    delaycompress
+    dateext
+    su codexbot codexbot
+    create 0600 codexbot codexbot
+}

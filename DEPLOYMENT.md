@@ -20,6 +20,26 @@ Systemd is the likely supervisor on GCE. Docker and Cloud Logging will be used o
 if they provide a concrete operational benefit after VM and logging costs are
 agreed.
 
+The approved TEST target is the existing `auditbot` e2-medium VM in project
+`diamond-bot-511604`, zone `asia-south1-c`, on Debian 13. No VM creation,
+replacement, reimage, disk resize, new port, or change to the sapphairebot
+production VM is authorized. The target-side read-only inspection script refuses
+to run if the metadata or OS does not match those values.
+
+### Preliminary monthly cost range
+
+For an always-on on-demand `e2-medium` in Mumbai, retain a planning range of
+approximately **USD 29-41 per month before tax**: roughly USD 25-35 for compute
+after normal usage discounts, USD 0.5-2 for the existing 10 GB boot disk depending
+on its disk class, and about USD 3.65 if the VM retains a chargeable external IPv4
+address. Network egress and chargeable Cloud Logging volume are additional. The
+read-only inspection must confirm disk class, external IP, uptime model, current
+billing/SKU currency, and actual utilization before this becomes a budget figure.
+The local health check and same-disk backup templates create no separate GCP
+resource. Expanding the existing disk to 30 GB would add roughly USD 1-4 monthly,
+depending on disk class, but remains unapproved and will be recommended only if
+inspection shows inadequate headroom.
+
 The implemented `codexbot-listener --environment <protected-file>` entrypoint
 assembles the current TEST observation process and refuses `LIVE` because the
 write executor is absent. [deploy/codexbot.service.example](deploy/codexbot.service.example)

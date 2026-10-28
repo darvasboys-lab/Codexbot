@@ -94,8 +94,11 @@ separately approved live test.
   fixed `LIVE_EXECUTOR_ABSENT` code.
 - Verify the SQLite directory cannot be a symlink and is owner-only, database and
   backup files are owner-only, and a database made group/world-readable is refused.
+- On the attached target, run the read-only deployment inspection first and verify
+  it refuses mismatched project, instance, zone, and OS metadata. Validate systemd
+  units before installation and confirm no new listening socket appears afterward.
 
-Current result: 259 tests pass. Ruff and strict mypy pass.
+Current result: 261 tests pass. Ruff and strict mypy pass.
 
 ## 2. Remaining parser and reference-rule tests
 

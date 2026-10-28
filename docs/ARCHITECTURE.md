@@ -113,6 +113,10 @@ LIVE mode while no executor exists.
 - **Audit operations:** bounded `audit-history`, feedback history, and dated NSE
   calendar open/clear status are available over local SSH. Every override records
   the local OS actor and reason and cannot be updated or deleted.
+- **VM boundary:** deployment assets verify GCE metadata for the approved
+  `auditbot` TEST VM before mutation. Local systemd supervision, file logs, and
+  SQLite health checks require no inbound port. Backup scheduling remains disabled
+  until its storage destination and cost are approved.
 - **Health coordinator:** composes Telegram, Dhan token/fund, SQLite integrity,
   emergency-stop, mode, and executor state into a redacted audit event. The
   executor is explicitly absent, so LIVE capability is always false. Scheduling

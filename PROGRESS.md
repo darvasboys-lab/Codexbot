@@ -27,7 +27,7 @@ are tracked separately so offline tests cannot be mistaken for deployment proof.
 | Emergency stop and SSH status | Implemented offline | VM permissions and pending-order cancellation require later executor |
 | 08:00 component health | Implemented with calendar health | Missed-run, retry, and notification policy required |
 | Order execution, fills, protection, retries | Blocked | Trading decisions and current Dhan/regulatory approval required |
-| New GCE TEST deployment | Not started | Infrastructure inputs and explicit deployment approval required |
+| Existing auditbot GCE TEST deployment | Approved, access blocked | Target fixed; managed workspace lacks GCP/SSH identity and TCP grant |
 | Live order test | Not authorized | Requires completed TEST evidence and separate explicit approval |
 
 ## Current verification
@@ -35,7 +35,7 @@ are tracked separately so offline tests cannot be mistaken for deployment proof.
 - Python 3.12 locked environment: passing.
 - Ruff: passing.
 - Strict mypy: passing.
-- Automated tests: 259 passing.
+- Automated tests: 261 passing.
 - GitHub CI: required for every push to `main`.
 - Broker write methods: absent.
 - Paper trading and simulated portfolio state: absent.
@@ -66,7 +66,7 @@ are tracked separately so offline tests cannot be mistaken for deployment proof.
 | D-07 | BSE source, NSE cache age/refresh, missed 08:00 run, retry/alert behavior | Automated daily health schedule |
 | D-08 | AI provider, data policy, eligible rechecks, cost and timeout | Advisory AI layer |
 | D-09 | Groups/source IDs/log, absolute limits, starting-capital source, sector map, risk %, exact 10-15% allocation | Credentialed TEST configuration |
-| D-10 | GCP project, region/zone, budget, backup and logging retention | New VM plan |
+| D-10 | Project/VM/zone resolved; supply authorized GCP/SSH connection, backup destination/cost and test-record retention semantics | Existing auditbot deployment |
 | D-11 | Redacted equity BUY/SELL and more malformed examples | Remaining parser coverage |
 | D-12 | Dhan confirmation for post-April-2026 client algo/static-IP/hosting rules | Any LIVE executor implementation |
 

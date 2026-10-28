@@ -1,0 +1,24 @@
+[Unit]
+Description=Create a local Codexbot SQLite backup
+ConditionPathExists=/var/lib/codexbot/codexbot.sqlite3
+
+[Service]
+Type=oneshot
+User=codexbot
+Group=codexbot
+UMask=0077
+ExecStart=/bin/sh -c '/opt/codexbot/.venv/bin/codexbot-db backup --database /var/lib/codexbot/codexbot.sqlite3 --output /var/backups/codexbot/codexbot-$(date -u +%%Y%%m%%dT%%H%%M%%SZ).sqlite3'
+ExecStartPost=/usr/bin/find /var/backups/codexbot -type f -name 'codexbot-*.sqlite3' -mtime +6 -delete
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+ReadWritePaths=/var/backups/codexbot
+RestrictAddressFamilies=AF_UNIX
+
